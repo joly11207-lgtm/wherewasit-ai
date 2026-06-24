@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply min-h-screen bg-mist text-ink antialiased;
+  background-image:
+    radial-gradient(circle at top left, rgba(180, 138, 65, 0.22), transparent 28%),
+    radial-gradient(circle at top right, rgba(40, 70, 63, 0.14), transparent 24%),
+    linear-gradient(180deg, #f8f3ea 0%, #f1e6d3 100%);
+}
+
+::selection {
+  background: rgba(201, 106, 61, 0.22);
+}
