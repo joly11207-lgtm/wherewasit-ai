@@ -1,4 +1,4 @@
-import { EngineCandidate, ExtractedInput, WisdomResult } from "@/lib/types";
+import { EngineCandidate, ExtractedInput, TimeHints, WisdomResult } from "@/lib/types";
 
 function hasAny(text: string, phrases: string[]): boolean {
   return phrases.some((phrase) => text.includes(phrase));
@@ -24,7 +24,73 @@ function pushCandidate(
   collection.push({ location, weight, reason, hiddenSpots, tags });
 }
 
-export function wisdomEngine(input: ExtractedInput): WisdomResult {
+function timeSignalFromHints(timeHints: TimeHints): {
+  weight: number;
+  location: string;
+  reason: string;
+  cue: string;
+} | null {
+  if (!timeHints.canUseTimeWisdom) {
+    return null;
+  }
+
+  const hour = timeHints.approximateHour;
+  const window = timeHints.approximateTimeWindow;
+
+  if (window === "early_morning" || (hour !== null && hour >= 5 && hour < 8)) {
+    return {
+      weight: 4,
+      location: "Covered area near where the day started",
+      reason: "A time-based intuitive signal leans toward small covered spots used during the first routine of the day.",
+      cue: "a covered area near the start of your routine"
+    };
+  }
+
+  if (window === "morning" || (hour !== null && hour >= 8 && hour < 12)) {
+    return {
+      weight: 4,
+      location: "Surface near a bag, desk, or getting-ready area",
+      reason: "A time-based intuitive signal points toward the kind of surface used during morning transitions.",
+      cue: "a transition surface near a bag or getting-ready area"
+    };
+  }
+
+  if (window === "afternoon" || (hour !== null && hour >= 12 && hour < 17)) {
+    return {
+      weight: 4,
+      location: "Work surface or carry spot used mid-day",
+      reason: "A time-based intuitive signal points toward a practical mid-day handoff spot.",
+      cue: "a work surface or carry spot from the middle of the day"
+    };
+  }
+
+  if (window === "evening" || (hour !== null && hour >= 17 && hour < 21)) {
+    return {
+      weight: 4,
+      location: "Comfort area near seating, counters, or bags",
+      reason: "A time-based intuitive signal favors the area where the day started slowing down.",
+      cue: "a comfort-zone area where things were being set down at the end of the day"
+    };
+  }
+
+  if (window === "night" || (hour !== null && hour >= 21 && hour < 24)) {
+    return {
+      weight: 4,
+      location: "Bedside area or partly covered soft surface",
+      reason: "A time-based intuitive signal points toward a quieter, more covered night-time resting place.",
+      cue: "a partly covered night-time resting spot"
+    };
+  }
+
+  return {
+    weight: 4,
+    location: "Quiet indoor edge or tucked-away surface",
+    reason: "A time-based intuitive signal suggests a quieter tucked-away place from the late-night routine.",
+    cue: "a quiet tucked-away place from the late-night routine"
+  };
+}
+
+export function wisdomEngine(input: ExtractedInput, timeHints: TimeHints): WisdomResult {
   const lowerText = input.freeText.toLowerCase();
   const directionHint = directionFromSeed(`${input.itemType}:${input.lastSeenLocation}`);
   const candidates: EngineCandidate[] = [];
@@ -108,7 +174,22 @@ export function wisdomEngine(input: ExtractedInput): WisdomResult {
   );
   cues.push(`${directionHint.toLowerCase()} direction hint`);
 
-  const signal = `Signals suggest starting in a familiar indoor space, especially where the scene feels covered, quiet, or slightly off to the ${directionHint.toLowerCase()}.`;
+  const timeSignal = timeSignalFromHints(timeHints);
+  if (timeSignal) {
+    pushCandidate(
+      candidates,
+      timeSignal.location,
+      timeSignal.weight,
+      timeSignal.reason,
+      ["Under a cover layer", "Beside a routine-use object", "At the edge of a nearby surface"],
+      ["time", "covered"]
+    );
+    cues.push("time-based intuitive signal");
+  }
+
+  const signal = timeSignal
+    ? `Signals suggest starting in a familiar indoor space, especially where the scene feels covered, quiet, or slightly off to the ${directionHint.toLowerCase()}. A time-based intuitive signal also points toward ${timeSignal.cue}.`
+    : `Signals suggest starting in a familiar indoor space, especially where the scene feels covered, quiet, or slightly off to the ${directionHint.toLowerCase()}.`;
 
   return {
     signal,

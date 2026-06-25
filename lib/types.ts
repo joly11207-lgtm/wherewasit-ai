@@ -5,6 +5,43 @@ export type ExtractedInput = {
   placesVisited: string[];
   emotionalContext: string;
   freeText: string;
+  selectedHints?: OptionalDetailInputs;
+};
+
+export type OptionalDetailInputs = {
+  selectedItemType?: string;
+  selectedPlace?: string;
+  selectedDateMode?: "today" | "yesterday" | "pick_date" | "not_sure";
+  selectedDate?: string;
+  selectedTimeMode?:
+    | "early_morning"
+    | "morning"
+    | "afternoon"
+    | "evening"
+    | "night"
+    | "late_night"
+    | "approximate_hour"
+    | "not_sure";
+  selectedHour?: string;
+};
+
+export type AnalyzeCluesInput = {
+  freeText: string;
+  details?: OptionalDetailInputs;
+};
+
+export type TimeHints = {
+  approximateTimeWindow:
+    | "early_morning"
+    | "morning"
+    | "afternoon"
+    | "evening"
+    | "night"
+    | "late_night"
+    | null;
+  approximateHour: number | null;
+  localDate: string | null;
+  canUseTimeWisdom: boolean;
 };
 
 export type ItemCategory =
@@ -77,6 +114,7 @@ export type SearchPlanResult = {
 export type LocalAnalysis = {
   input: ExtractedInput;
   itemCategory: ItemCategory;
+  timeHints: TimeHints;
   memory: MemoryResult;
   behavior: BehaviorPattern[];
   wisdom: WisdomResult;

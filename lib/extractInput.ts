@@ -1,4 +1,4 @@
-import { ExtractedInput } from "@/lib/types";
+import { ExtractedInput, OptionalDetailInputs } from "@/lib/types";
 
 const KNOWN_ITEMS = [
   "airpods",
@@ -40,6 +40,32 @@ const DISPLAY_ITEMS: Record<string, string> = {
   bag: "Bag",
   laptop: "Laptop",
   charger: "Charger"
+};
+
+const SELECTED_ITEM_DISPLAY: Record<string, string> = {
+  keys: "Keys",
+  wallet: "Wallet",
+  phone: "Phone",
+  "airpods / earbuds": "AirPods / Earbuds",
+  "ring / jewelry": "Ring / Jewelry",
+  "passport / documents": "Passport / Documents",
+  glasses: "Glasses",
+  "bag / backpack": "Bag / Backpack",
+  other: "Other"
+};
+
+const SELECTED_PLACE_DISPLAY: Record<string, string> = {
+  home: "Home",
+  bedroom: "Bedroom",
+  bathroom: "Bathroom",
+  kitchen: "Kitchen",
+  car: "Car",
+  "work / office": "Work / Office",
+  school: "School",
+  store: "Store",
+  "hotel / travel": "Hotel / Travel",
+  outside: "Outside",
+  "not sure": "Not sure"
 };
 
 const KNOWN_PLACES = [
@@ -122,6 +148,15 @@ function extractItemType(text: string): string {
   return knownItem ? DISPLAY_ITEMS[knownItem] ?? titleCase(knownItem) : "Item";
 }
 
+function selectedItemType(details?: OptionalDetailInputs): string | null {
+  const value = details?.selectedItemType?.trim().toLowerCase();
+  if (!value || value === "other") {
+    return null;
+  }
+
+  return SELECTED_ITEM_DISPLAY[value] ?? titleCase(value);
+}
+
 function extractLastSeenLocation(text: string): string {
   const patterns = [
     /last (?:used|saw|had|left|remember(?:ed)? having) (?:it|them|my [a-z0-9\s'-]+)? ?(?:in|at|on) ([^.!,;]+)/i,
@@ -140,6 +175,15 @@ function extractLastSeenLocation(text: string): string {
 
   const knownPlace = KNOWN_PLACES.find((place) => text.toLowerCase().includes(place));
   return knownPlace ? titleCase(knownPlace) : "Last known area";
+}
+
+function selectedPlace(details?: OptionalDetailInputs): string | null {
+  const value = details?.selectedPlace?.trim().toLowerCase();
+  if (!value || value === "not sure") {
+    return null;
+  }
+
+  return SELECTED_PLACE_DISPLAY[value] ?? titleCase(value);
 }
 
 function extractLastSeenTime(text: string): string {
@@ -163,6 +207,47 @@ function extractLastSeenTime(text: string): string {
   }
 
   return "Recently";
+}
+
+function selectedTimeLabel(details?: OptionalDetailInputs): string | null {
+  const dateMode = details?.selectedDateMode;
+  const timeMode = details?.selectedTimeMode;
+
+  if ((!dateMode || dateMode === "not_sure") && (!timeMode || timeMode === "not_sure")) {
+    return null;
+  }
+
+  const datePart =
+    dateMode === "today"
+      ? "Today"
+      : dateMode === "yesterday"
+        ? "Yesterday"
+        : dateMode === "pick_date"
+          ? details?.selectedDate?.trim() || "Selected date"
+          : null;
+
+  const timePart =
+    timeMode === "early_morning"
+      ? "Early Morning"
+      : timeMode === "morning"
+        ? "Morning"
+        : timeMode === "afternoon"
+          ? "Afternoon"
+          : timeMode === "evening"
+            ? "Evening"
+            : timeMode === "night"
+              ? "Night"
+              : timeMode === "late_night"
+                ? "Late Night"
+                : timeMode === "approximate_hour"
+                  ? details?.selectedHour?.trim() || "Approximate hour"
+                  : null;
+
+  if (datePart && timePart) {
+    return `${datePart}, ${timePart}`;
+  }
+
+  return datePart ?? timePart;
 }
 
 function extractPlacesVisited(text: string): string[] {
@@ -204,15 +289,22 @@ function extractEmotionalContext(text: string): string {
   return titleCase(found.join(", "));
 }
 
-export function extractInput(freeText: string): ExtractedInput {
+export function extractInput(freeText: string, details?: OptionalDetailInputs): ExtractedInput {
   const normalized = freeText.replace(/\s+/g, " ").trim();
+  const extractedItem = extractItemType(normalized);
+  const extractedLocation = extractLastSeenLocation(normalized);
+  const extractedTime = extractLastSeenTime(normalized);
 
   return {
-    itemType: extractItemType(normalized),
-    lastSeenLocation: extractLastSeenLocation(normalized),
-    lastSeenTime: extractLastSeenTime(normalized),
+    itemType: extractedItem !== "Item" ? extractedItem : selectedItemType(details) ?? extractedItem,
+    lastSeenLocation:
+      extractedLocation !== "Last known area"
+        ? extractedLocation
+        : selectedPlace(details) ?? extractedLocation,
+    lastSeenTime: extractedTime !== "Recently" ? extractedTime : selectedTimeLabel(details) ?? extractedTime,
     placesVisited: extractPlacesVisited(normalized),
     emotionalContext: extractEmotionalContext(normalized),
-    freeText: normalized
+    freeText: normalized,
+    selectedHints: details
   };
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
 import { trackEvent } from "@/lib/analytics";
-import { LocalAnalysis, ReportSections } from "@/lib/types";
+import { LocalAnalysis, OptionalDetailInputs, ReportSections } from "@/lib/types";
 
 type AnalyzeResponse = {
   analysis: LocalAnalysis;
@@ -14,6 +14,77 @@ type AnalyzeResponse = {
 };
 
 type FeedbackState = "found_it" | "not_yet" | null;
+
+const itemTypeOptions = [
+  "Keys",
+  "Wallet",
+  "Phone",
+  "AirPods / Earbuds",
+  "Ring / Jewelry",
+  "Passport / Documents",
+  "Glasses",
+  "Bag / Backpack",
+  "Other"
+];
+
+const placeOptions = [
+  "Home",
+  "Bedroom",
+  "Bathroom",
+  "Kitchen",
+  "Car",
+  "Work / Office",
+  "School",
+  "Store",
+  "Hotel / Travel",
+  "Outside",
+  "Not sure"
+];
+
+const dateOptions = [
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "pick_date", label: "Pick a date" },
+  { value: "not_sure", label: "Not sure" }
+];
+
+const timeOptions = [
+  { value: "early_morning", label: "Early morning (5–8)" },
+  { value: "morning", label: "Morning (8–12)" },
+  { value: "afternoon", label: "Afternoon (12–5)" },
+  { value: "evening", label: "Evening (5–9)" },
+  { value: "night", label: "Night (9–12)" },
+  { value: "late_night", label: "Late night (12–5)" },
+  { value: "approximate_hour", label: "Approximate hour" },
+  { value: "not_sure", label: "Not sure" }
+];
+
+const hourOptions = [
+  "1 AM",
+  "2 AM",
+  "3 AM",
+  "4 AM",
+  "5 AM",
+  "6 AM",
+  "7 AM",
+  "8 AM",
+  "9 AM",
+  "10 AM",
+  "11 AM",
+  "12 PM",
+  "1 PM",
+  "2 PM",
+  "3 PM",
+  "4 PM",
+  "5 PM",
+  "6 PM",
+  "7 PM",
+  "8 PM",
+  "9 PM",
+  "10 PM",
+  "11 PM",
+  "12 AM"
+];
 
 const examplePrompts = [
   "I lost my AirPods. I last used them in my bedroom this morning, then drove to work.",
@@ -51,6 +122,11 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<FeedbackState>(null);
+  const [showOptionalDetails, setShowOptionalDetails] = useState(false);
+  const [details, setDetails] = useState<OptionalDetailInputs>({
+    selectedDateMode: "not_sure",
+    selectedTimeMode: "not_sure"
+  });
 
   useEffect(() => {
     if (report && analysis) {
@@ -66,6 +142,13 @@ export default function HomePage() {
     trackEvent("example_prompt_selected", { example });
   }
 
+  function updateDetail<K extends keyof OptionalDetailInputs>(
+    key: K,
+    value: OptionalDetailInputs[K]
+  ) {
+    setDetails((current) => ({ ...current, [key]: value }));
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -78,7 +161,10 @@ export default function HomePage() {
     setError(null);
     setUsedFallback(false);
     setFeedbackState(null);
-    trackEvent("analysis_started", { inputLength: input.trim().length });
+    trackEvent("analysis_started", {
+      inputLength: input.trim().length,
+      usedOptionalDetails: showOptionalDetails
+    });
 
     try {
       const response = await fetch("/api/analyze", {
@@ -86,7 +172,10 @@ export default function HomePage() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ input })
+        body: JSON.stringify({
+          input,
+          ...details
+        })
       });
 
       const data = (await response.json()) as AnalyzeResponse;
@@ -189,6 +278,129 @@ export default function HomePage() {
                 disabled={isLoading}
                 placeholder="I lost my keys. I had them in the kitchen after lunch, then I rushed out to the car."
               />
+
+              <div className="rounded-[1.25rem] border border-pine/10 bg-pine/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextState = !showOptionalDetails;
+                    setShowOptionalDetails(nextState);
+                    trackEvent("optional_details_toggled", { expanded: nextState });
+                  }}
+                  className="flex w-full items-center justify-between px-4 py-3 text-left font-body text-sm font-semibold text-pine transition hover:bg-pine/5"
+                >
+                  <span>+ Add more details (optional)</span>
+                  <span className="text-xs uppercase tracking-[0.16em] text-pine/60">
+                    {showOptionalDetails ? "Hide" : "Show"}
+                  </span>
+                </button>
+
+                {showOptionalDetails ? (
+                  <div className="grid gap-4 border-t border-pine/10 px-4 py-4 md:grid-cols-2">
+                    <label className="block">
+                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                        Item type
+                      </span>
+                      <select
+                        value={details.selectedItemType ?? ""}
+                        onChange={(event) => updateDetail("selectedItemType", event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                      >
+                        <option value="">Use only my story</option>
+                        {itemTypeOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="block">
+                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                        Last known place
+                      </span>
+                      <select
+                        value={details.selectedPlace ?? ""}
+                        onChange={(event) => updateDetail("selectedPlace", event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                      >
+                        <option value="">Use only my story</option>
+                        {placeOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="block">
+                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                        Last seen date
+                      </span>
+                      <select
+                        value={details.selectedDateMode ?? "not_sure"}
+                        onChange={(event) =>
+                          updateDetail(
+                            "selectedDateMode",
+                            event.target.value as OptionalDetailInputs["selectedDateMode"]
+                          )
+                        }
+                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                      >
+                        {dateOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      {details.selectedDateMode === "pick_date" ? (
+                        <input
+                          type="date"
+                          value={details.selectedDate ?? ""}
+                          onChange={(event) => updateDetail("selectedDate", event.target.value)}
+                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        />
+                      ) : null}
+                    </label>
+
+                    <label className="block">
+                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                        Approximate time
+                      </span>
+                      <select
+                        value={details.selectedTimeMode ?? "not_sure"}
+                        onChange={(event) =>
+                          updateDetail(
+                            "selectedTimeMode",
+                            event.target.value as OptionalDetailInputs["selectedTimeMode"]
+                          )
+                        }
+                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                      >
+                        {timeOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      {details.selectedTimeMode === "approximate_hour" ? (
+                        <select
+                          value={details.selectedHour ?? ""}
+                          onChange={(event) => updateDetail("selectedHour", event.target.value)}
+                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        >
+                          <option value="">Choose an hour</option>
+                          {hourOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      ) : null}
+                    </label>
+                  </div>
+                ) : null}
+              </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <button

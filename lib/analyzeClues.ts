@@ -4,20 +4,24 @@ import { probabilityEngine } from "@/lib/engines/probabilityEngine";
 import { wisdomEngine } from "@/lib/engines/wisdomEngine";
 import { extractInput } from "@/lib/extractInput";
 import { searchPlanner } from "@/lib/searchPlanner";
-import { LocalAnalysis } from "@/lib/types";
+import { timeHints } from "@/lib/timeHints";
+import { AnalyzeCluesInput, LocalAnalysis } from "@/lib/types";
 
-export function analyzeClues(freeText: string): LocalAnalysis {
-  const input = extractInput(freeText);
+export function analyzeClues(payload: string | AnalyzeCluesInput): LocalAnalysis {
+  const request = typeof payload === "string" ? { freeText: payload } : payload;
+  const input = extractInput(request.freeText, request.details);
   const itemCategory = resolveItemCategory(input.itemType);
+  const derivedTimeHints = timeHints(request.details);
   const memory = memoryEngine(input);
   const behavior = behaviorEngine(input);
-  const wisdom = wisdomEngine(input);
+  const wisdom = wisdomEngine(input, derivedTimeHints);
   const probabilities = probabilityEngine(input, itemCategory, memory, behavior, wisdom);
   const searchPlan = searchPlanner(input, itemCategory, probabilities, wisdom);
 
   return {
     input,
     itemCategory,
+    timeHints: derivedTimeHints,
     memory,
     behavior,
     wisdom,
