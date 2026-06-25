@@ -24,8 +24,91 @@ body {
   color: #fff4de;
 }
 
+@keyframes starTwinkleA {
+  0%,
+  100% {
+    opacity: 0.32;
+  }
+  35% {
+    opacity: 0.54;
+  }
+  65% {
+    opacity: 0.24;
+  }
+}
+
+@keyframes starTwinkleB {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  45% {
+    opacity: 0.42;
+  }
+  70% {
+    opacity: 0.18;
+  }
+}
+
+@keyframes heroBreathe {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+  50% {
+    opacity: 0.28;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+}
+
+@keyframes cardFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes mapDrift {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(1deg);
+  }
+}
+
+@keyframes compassDrift {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1.6deg);
+  }
+}
+
+@keyframes shineSweep {
+  0% {
+    transform: translateX(-135%) skewX(-24deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.18;
+  }
+  100% {
+    transform: translateX(175%) skewX(-24deg);
+    opacity: 0;
+  }
+}
+
 @layer components {
   .mystery-card {
+    position: relative;
     background: rgba(10, 10, 10, 0.72);
     border: 1px solid rgba(212, 175, 110, 0.22);
     border-radius: 28px;
@@ -34,6 +117,11 @@ body {
       0 32px 90px rgba(0, 0, 0, 0.45),
       0 0 0 1px rgba(212, 175, 110, 0.02),
       0 0 42px rgba(212, 175, 110, 0.06);
+  }
+
+  .mystery-card--floating {
+    animation: cardFloat 10s ease-in-out infinite;
+    will-change: transform;
   }
 
   .eyebrow-text {
@@ -52,7 +140,34 @@ body {
     text-shadow: 0 0 28px rgba(212, 175, 110, 0.08);
   }
 
+  .hero-stack {
+    position: relative;
+  }
+
+  .hero-stack::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 4.75rem;
+    width: min(32rem, 86vw);
+    height: 12rem;
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(212, 175, 110, 0.22) 0%, rgba(212, 175, 110, 0.08) 38%, transparent 74%);
+    filter: blur(28px);
+    opacity: 0.18;
+    animation: heroBreathe 14s ease-in-out infinite;
+    z-index: 0;
+  }
+
+  .hero-stack > * {
+    position: relative;
+    z-index: 1;
+  }
+
   .gold-button {
+    position: relative;
+    overflow: hidden;
     background:
       linear-gradient(135deg, rgba(176, 131, 48, 0.95), rgba(118, 84, 29, 0.96)),
       linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
@@ -67,6 +182,16 @@ body {
       filter 180ms ease;
   }
 
+  .gold-button::after {
+    content: "";
+    position: absolute;
+    inset: -20% auto -20% -32%;
+    width: 32%;
+    background: linear-gradient(90deg, transparent, rgba(255, 244, 216, 0.28), transparent);
+    opacity: 0;
+    pointer-events: none;
+  }
+
   .gold-button:hover {
     transform: translateY(-1px);
     filter: brightness(1.04);
@@ -76,7 +201,12 @@ body {
       0 0 30px rgba(212, 175, 110, 0.14);
   }
 
+  .gold-button:hover::after {
+    animation: shineSweep 850ms ease forwards;
+  }
+
   .starfield {
+    position: relative;
     background-image:
       radial-gradient(circle at 12% 18%, rgba(255, 236, 195, 0.85) 0, rgba(255, 236, 195, 0.85) 1px, transparent 1.6px),
       radial-gradient(circle at 28% 62%, rgba(212, 175, 110, 0.7) 0, rgba(212, 175, 110, 0.7) 1px, transparent 1.8px),
@@ -86,6 +216,36 @@ body {
       radial-gradient(circle at 40% 84%, rgba(212, 175, 110, 0.58) 0, rgba(212, 175, 110, 0.58) 1px, transparent 1.8px),
       radial-gradient(circle at 8% 82%, rgba(255, 236, 195, 0.66) 0, rgba(255, 236, 195, 0.66) 1px, transparent 1.9px);
     background-repeat: no-repeat;
+    animation: starTwinkleA 17s ease-in-out infinite;
+  }
+
+  .starfield::before,
+  .starfield::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+    pointer-events: none;
+  }
+
+  .starfield::before {
+    background-image:
+      radial-gradient(circle at 18% 32%, rgba(255, 236, 195, 0.78) 0, rgba(255, 236, 195, 0.78) 1px, transparent 1.6px),
+      radial-gradient(circle at 52% 14%, rgba(212, 175, 110, 0.64) 0, rgba(212, 175, 110, 0.64) 1px, transparent 1.8px),
+      radial-gradient(circle at 70% 72%, rgba(255, 236, 195, 0.68) 0, rgba(255, 236, 195, 0.68) 1px, transparent 1.7px),
+      radial-gradient(circle at 92% 64%, rgba(212, 175, 110, 0.58) 0, rgba(212, 175, 110, 0.58) 1px, transparent 1.8px);
+    opacity: 0.28;
+    animation: starTwinkleB 21s ease-in-out infinite;
+  }
+
+  .starfield::after {
+    background-image:
+      radial-gradient(circle at 6% 56%, rgba(255, 236, 195, 0.68) 0, rgba(255, 236, 195, 0.68) 1px, transparent 1.7px),
+      radial-gradient(circle at 36% 10%, rgba(212, 175, 110, 0.55) 0, rgba(212, 175, 110, 0.55) 1px, transparent 1.8px),
+      radial-gradient(circle at 58% 88%, rgba(255, 236, 195, 0.62) 0, rgba(255, 236, 195, 0.62) 1px, transparent 1.8px),
+      radial-gradient(circle at 82% 26%, rgba(212, 175, 110, 0.5) 0, rgba(212, 175, 110, 0.5) 1px, transparent 1.9px);
+    opacity: 0.2;
+    animation: starTwinkleA 25s ease-in-out infinite reverse;
   }
 
   .map-lines {
@@ -96,6 +256,8 @@ body {
       linear-gradient(155deg, transparent 0 48%, rgba(212, 175, 110, 0.03) 50%, transparent 52%);
     background-size: 120px 120px, 120px 120px, 100% 100%, 100% 100%;
     mask-image: radial-gradient(circle at center, black 24%, transparent 82%);
+    animation: mapDrift 44s ease-in-out infinite;
+    will-change: transform;
   }
 
   .compass-orbit {
@@ -104,5 +266,17 @@ body {
       radial-gradient(circle, transparent 72%, rgba(212, 175, 110, 0.08) 73%, transparent 74%),
       linear-gradient(rgba(212, 175, 110, 0.08), rgba(212, 175, 110, 0.08)) center/1px 100% no-repeat,
       linear-gradient(90deg, rgba(212, 175, 110, 0.08), rgba(212, 175, 110, 0.08)) center/100% 1px no-repeat;
+    animation: compassDrift 56s ease-in-out infinite;
+    will-change: transform;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

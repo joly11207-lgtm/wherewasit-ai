@@ -353,7 +353,7 @@ export default function HomePage() {
 
       <div className="relative mx-auto flex min-h-[calc(100vh-10rem)] max-w-4xl flex-col justify-center">
         <section className="space-y-6">
-          <div className="mx-auto max-w-2xl text-center">
+          <div className="hero-stack mx-auto max-w-2xl text-center">
             <p className="eyebrow-text">WhereWasIt.ai</p>
             <h1 className="hero-title mt-4 font-display text-4xl leading-tight sm:text-5xl md:text-6xl">
               Lost something?
@@ -541,7 +541,7 @@ export default function HomePage() {
               </details>
             </div>
           ) : (
-            <section className="mystery-card mx-auto w-full max-w-3xl p-5 sm:p-7 md:p-8">
+            <section className="mystery-card mystery-card--floating mx-auto w-full max-w-3xl p-5 sm:p-7 md:p-8">
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div className="rounded-[1.6rem] border border-[rgba(212,175,110,0.12)] bg-[rgba(255,255,255,0.025)] p-4 sm:p-5">
                   <p className="font-body text-sm leading-7 text-[#c3b797]">
