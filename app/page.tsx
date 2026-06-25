@@ -32,6 +32,8 @@ const examplePrompts = [
   }
 ];
 
+const OTHER_OPTION = "__other__";
+
 const itemTypeOptions = [
   "Keys",
   "Wallet",
@@ -41,7 +43,7 @@ const itemTypeOptions = [
   "Passport / Documents",
   "Glasses",
   "Bag / Backpack",
-  "Other"
+  "Other..."
 ];
 
 const placeOptions = [
@@ -55,7 +57,8 @@ const placeOptions = [
   "Store",
   "Hotel / Travel",
   "Outside",
-  "Not sure"
+  "Not sure",
+  "Other..."
 ];
 
 const dateOptions = [
@@ -192,8 +195,9 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<FeedbackState>(null);
-  const [showOptionalDetails, setShowOptionalDetails] = useState(false);
   const [showAdvancedAnalysis, setShowAdvancedAnalysis] = useState(false);
+  const [customItemType, setCustomItemType] = useState("");
+  const [customPlace, setCustomPlace] = useState("");
   const [details, setDetails] = useState<OptionalDetailInputs>({
     selectedDateMode: "not_sure",
     selectedTimeMode: "not_sure"
@@ -244,9 +248,25 @@ export default function HomePage() {
     setUsedFallback(false);
     setFeedbackState(null);
     setShowAdvancedAnalysis(false);
+
+    const selectedItemType =
+      details.selectedItemType === OTHER_OPTION
+        ? customItemType.trim() || undefined
+        : details.selectedItemType;
+
+    const selectedPlace =
+      details.selectedPlace === OTHER_OPTION ? customPlace.trim() || undefined : details.selectedPlace;
+
+    const usedOptionalDetails = Boolean(
+      selectedItemType ||
+        selectedPlace ||
+        (details.selectedDateMode && details.selectedDateMode !== "not_sure") ||
+        (details.selectedTimeMode && details.selectedTimeMode !== "not_sure")
+    );
+
     trackEvent("analysis_started", {
       inputLength: input.trim().length,
-      usedOptionalDetails: showOptionalDetails
+      usedOptionalDetails
     });
 
     try {
@@ -257,7 +277,9 @@ export default function HomePage() {
         },
         body: JSON.stringify({
           input,
-          ...details
+          ...details,
+          selectedItemType,
+          selectedPlace
         })
       });
 
@@ -306,8 +328,9 @@ export default function HomePage() {
     setIsLoading(false);
     setUsedFallback(false);
     setFeedbackState(null);
-    setShowOptionalDetails(false);
     setShowAdvancedAnalysis(false);
+    setCustomItemType("");
+    setCustomPlace("");
     setDetails({
       selectedDateMode: "not_sure",
       selectedTimeMode: "not_sure"
@@ -515,6 +538,150 @@ export default function HomePage() {
           ) : (
             <section className="mx-auto w-full max-w-3xl rounded-[2rem] border border-white/70 bg-white/84 p-5 shadow-glow backdrop-blur sm:p-7 md:p-8">
               <form className="space-y-4" onSubmit={handleSubmit}>
+                <div className="rounded-[1.5rem] border border-pine/10 bg-pine/5 p-4 sm:p-5">
+                  <p className="font-body text-sm leading-7 text-ink/68">
+                    The more details you provide, the better your chances of finding your item.
+                  </p>
+
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                        Item
+                      </span>
+                      <select
+                        value={details.selectedItemType ?? ""}
+                        onChange={(event) => {
+                          updateDetail("selectedItemType", event.target.value);
+                          if (event.target.value !== OTHER_OPTION) {
+                            setCustomItemType("");
+                          }
+                        }}
+                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                      >
+                        <option value="">Optional</option>
+                        {itemTypeOptions.map((option) => (
+                          <option
+                            key={option}
+                            value={option === "Other..." ? OTHER_OPTION : option}
+                          >
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                      {details.selectedItemType === OTHER_OPTION ? (
+                        <input
+                          type="text"
+                          value={customItemType}
+                          onChange={(event) => setCustomItemType(event.target.value)}
+                          placeholder="Type your item"
+                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        />
+                      ) : null}
+                    </label>
+
+                    <label className="block">
+                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                        Last known place
+                      </span>
+                      <select
+                        value={details.selectedPlace ?? ""}
+                        onChange={(event) => {
+                          updateDetail("selectedPlace", event.target.value);
+                          if (event.target.value !== OTHER_OPTION) {
+                            setCustomPlace("");
+                          }
+                        }}
+                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                      >
+                        <option value="">Optional</option>
+                        {placeOptions.map((option) => (
+                          <option
+                            key={option}
+                            value={option === "Other..." ? OTHER_OPTION : option}
+                          >
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                      {details.selectedPlace === OTHER_OPTION ? (
+                        <input
+                          type="text"
+                          value={customPlace}
+                          onChange={(event) => setCustomPlace(event.target.value)}
+                          placeholder="Type a place"
+                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        />
+                      ) : null}
+                    </label>
+
+                    <label className="block">
+                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                        Approximate time
+                      </span>
+                      <select
+                        value={details.selectedTimeMode ?? "not_sure"}
+                        onChange={(event) =>
+                          updateDetail(
+                            "selectedTimeMode",
+                            event.target.value as OptionalDetailInputs["selectedTimeMode"]
+                          )
+                        }
+                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                      >
+                        {timeOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      {details.selectedTimeMode === "approximate_hour" ? (
+                        <select
+                          value={details.selectedHour ?? ""}
+                          onChange={(event) => updateDetail("selectedHour", event.target.value)}
+                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        >
+                          <option value="">Choose an hour</option>
+                          {hourOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      ) : null}
+                    </label>
+
+                    <label className="block">
+                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                        Date (optional)
+                      </span>
+                      <select
+                        value={details.selectedDateMode ?? "not_sure"}
+                        onChange={(event) =>
+                          updateDetail(
+                            "selectedDateMode",
+                            event.target.value as OptionalDetailInputs["selectedDateMode"]
+                          )
+                        }
+                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                      >
+                        {dateOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      {details.selectedDateMode === "pick_date" ? (
+                        <input
+                          type="date"
+                          value={details.selectedDate ?? ""}
+                          onChange={(event) => updateDetail("selectedDate", event.target.value)}
+                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        />
+                      ) : null}
+                    </label>
+                  </div>
+                </div>
+
                 <textarea
                   className="min-h-56 w-full rounded-[1.9rem] border border-sand bg-[#fffaf3] px-5 py-5 font-body text-base leading-8 text-ink shadow-sm outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/20 disabled:cursor-not-allowed disabled:opacity-70 sm:min-h-64 sm:text-lg"
                   value={input}
@@ -522,129 +689,6 @@ export default function HomePage() {
                   disabled={isLoading}
                   placeholder="I lost my AirPods. I last used them in my bedroom this morning, then drove to work."
                 />
-
-                <div className="rounded-[1.35rem] border border-pine/10 bg-pine/5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextState = !showOptionalDetails;
-                      setShowOptionalDetails(nextState);
-                      trackEvent("optional_details_toggled", { expanded: nextState });
-                    }}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left font-body text-sm font-semibold text-pine transition hover:bg-pine/5"
-                  >
-                    <span>+ Add more details (optional)</span>
-                    <span className="text-xs uppercase tracking-[0.16em] text-pine/60">
-                      {showOptionalDetails ? "Hide" : "Show"}
-                    </span>
-                  </button>
-
-                  {showOptionalDetails ? (
-                    <div className="grid gap-4 border-t border-pine/10 px-4 py-4 md:grid-cols-2">
-                      <label className="block">
-                        <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                          Item type
-                        </span>
-                        <select
-                          value={details.selectedItemType ?? ""}
-                          onChange={(event) => updateDetail("selectedItemType", event.target.value)}
-                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
-                        >
-                          <option value="">Use only my story</option>
-                          {itemTypeOptions.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label className="block">
-                        <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                          Last known place
-                        </span>
-                        <select
-                          value={details.selectedPlace ?? ""}
-                          onChange={(event) => updateDetail("selectedPlace", event.target.value)}
-                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
-                        >
-                          <option value="">Use only my story</option>
-                          {placeOptions.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label className="block">
-                        <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                          Last seen date
-                        </span>
-                        <select
-                          value={details.selectedDateMode ?? "not_sure"}
-                          onChange={(event) =>
-                            updateDetail(
-                              "selectedDateMode",
-                              event.target.value as OptionalDetailInputs["selectedDateMode"]
-                            )
-                          }
-                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
-                        >
-                          {dateOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                        {details.selectedDateMode === "pick_date" ? (
-                          <input
-                            type="date"
-                            value={details.selectedDate ?? ""}
-                            onChange={(event) => updateDetail("selectedDate", event.target.value)}
-                            className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
-                          />
-                        ) : null}
-                      </label>
-
-                      <label className="block">
-                        <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                          Approximate time
-                        </span>
-                        <select
-                          value={details.selectedTimeMode ?? "not_sure"}
-                          onChange={(event) =>
-                            updateDetail(
-                              "selectedTimeMode",
-                              event.target.value as OptionalDetailInputs["selectedTimeMode"]
-                            )
-                          }
-                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
-                        >
-                          {timeOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                        {details.selectedTimeMode === "approximate_hour" ? (
-                          <select
-                            value={details.selectedHour ?? ""}
-                            onChange={(event) => updateDetail("selectedHour", event.target.value)}
-                            className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
-                          >
-                            <option value="">Choose an hour</option>
-                            {hourOptions.map((option) => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </select>
-                        ) : null}
-                      </label>
-                    </div>
-                  ) : null}
-                </div>
 
                 <div className="flex flex-col items-center gap-4 pt-1">
                   <button
