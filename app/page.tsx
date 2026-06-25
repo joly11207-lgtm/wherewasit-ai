@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 import { trackEvent } from "@/lib/analytics";
 import { LocalAnalysis, OptionalDetailInputs, ReportSections } from "@/lib/types";
@@ -21,7 +21,7 @@ const examplePrompts = [
     value: "I lost my AirPods. I last used them in my bedroom this morning, then drove to work."
   },
   {
-    label: "Wedding ring",
+    label: "Wedding Ring",
     value:
       "I misplaced my wedding ring. I took it off in the bathroom before showering, then changed clothes in the bedroom."
   },
@@ -113,6 +113,9 @@ const loadingSteps = [
   "Preparing your search plan..."
 ];
 
+const fieldClassName =
+  "mt-2 w-full rounded-[1.15rem] border border-[rgba(212,175,110,0.22)] bg-[rgba(0,0,0,0.45)] px-4 py-3 font-body text-sm text-[#efe4c8] outline-none transition placeholder:text-[#8a826e] focus:border-[#d4af6e] focus:ring-2 focus:ring-[rgba(212,175,110,0.18)]";
+
 function LoadingState() {
   const [activeStep, setActiveStep] = useState(0);
 
@@ -125,14 +128,14 @@ function LoadingState() {
   }, []);
 
   return (
-    <div className="rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-glow backdrop-blur sm:p-8">
+    <div className="mystery-card mx-auto w-full max-w-3xl p-6 sm:p-8">
       <div className="mx-auto max-w-2xl text-center">
-        <p className="font-body text-xs uppercase tracking-[0.28em] text-pine/60">Tracing Clues</p>
-        <h2 className="mt-3 font-display text-3xl text-pine sm:text-4xl">
+        <p className="eyebrow-text">Tracing Clues</p>
+        <h2 className="mt-4 font-display text-3xl text-[#f2e5c8] sm:text-4xl">
           Building your search plan
         </h2>
-        <p className="mt-3 font-body text-sm leading-7 text-ink/65 sm:text-base">
-          We are retracing your steps, weighing routine patterns, and preparing a calm second pass.
+        <p className="mt-3 font-body text-sm leading-7 text-[#c1b69d] sm:text-base">
+          We are retracing your route, weighing habit patterns, and narrowing overlooked places.
         </p>
       </div>
 
@@ -144,21 +147,21 @@ function LoadingState() {
           return (
             <div
               key={step}
-              className={`flex items-center gap-3 rounded-[1.35rem] px-4 py-4 transition ${
+              className={`flex items-center gap-3 rounded-[1.35rem] border px-4 py-4 transition ${
                 isActive
-                  ? "bg-pine text-white"
+                  ? "border-[rgba(212,175,110,0.32)] bg-[rgba(212,175,110,0.12)] text-[#f8edd8]"
                   : isComplete
-                    ? "bg-pine/8 text-pine"
-                    : "bg-[#fffaf3] text-ink/55"
+                    ? "border-[rgba(212,175,110,0.18)] bg-[rgba(212,175,110,0.07)] text-[#e7d3a9]"
+                    : "border-[rgba(212,175,110,0.12)] bg-[rgba(255,255,255,0.02)] text-[#90866d]"
               }`}
             >
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full border font-body text-xs font-semibold uppercase tracking-[0.16em] ${
+                className={`flex h-8 w-8 items-center justify-center rounded-full border text-[10px] font-semibold uppercase tracking-[0.18em] ${
                   isActive
-                    ? "border-white/35 bg-white/15"
+                    ? "border-[rgba(255,240,212,0.35)] bg-[rgba(255,240,212,0.08)]"
                     : isComplete
-                      ? "border-pine/15 bg-pine/10"
-                      : "border-sand bg-white"
+                      ? "border-[rgba(212,175,110,0.26)] bg-[rgba(212,175,110,0.1)]"
+                      : "border-[rgba(212,175,110,0.14)] bg-[rgba(255,255,255,0.02)]"
                 }`}
               >
                 {isComplete ? "Done" : isActive ? "Now" : `${index + 1}`}
@@ -172,18 +175,24 @@ function LoadingState() {
   );
 }
 
-function ResultCard({
-  title,
-  children
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function ResultCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-[2rem] border border-white/70 bg-white/82 p-6 shadow-glow backdrop-blur sm:p-7">
-      <h3 className="font-body text-sm uppercase tracking-[0.24em] text-ink/55">{title}</h3>
-      <div className="mt-4 font-body text-ink/82">{children}</div>
+    <section className="mystery-card p-6 sm:p-7">
+      <h3 className="eyebrow-text text-[11px] text-[#d4af6e]">{title}</h3>
+      <div className="mt-4 font-body text-[#efe4c8]">{children}</div>
     </section>
+  );
+}
+
+function BackgroundOrnaments() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(212,175,110,0.08),transparent_22%),radial-gradient(circle_at_20%_80%,rgba(212,175,110,0.04),transparent_18%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.03),transparent_20%)]" />
+      <div className="starfield absolute inset-0 opacity-80" />
+      <div className="map-lines absolute inset-0 opacity-30" />
+      <div className="compass-orbit absolute left-1/2 top-[7%] h-[32rem] w-[32rem] -translate-x-1/2 rounded-full opacity-40" />
+      <div className="compass-orbit absolute bottom-[-10rem] right-[-8rem] h-[26rem] w-[26rem] rounded-full opacity-20" />
+    </div>
   );
 }
 
@@ -207,10 +216,10 @@ export default function HomePage() {
 
   const introCopy = useMemo(() => {
     if (hasResult) {
-      return "Your search plan is ready. Start with the most likely area first, then widen carefully if needed.";
+      return "Your search plan is ready. Start with the nearest likely area and widen from there only if needed.";
     }
 
-    return "Describe what happened. We'll help you retrace the clues.";
+    return "We'll help you retrace the clues.";
   }, [hasResult]);
 
   useEffect(() => {
@@ -340,22 +349,16 @@ export default function HomePage() {
 
   return (
     <main className="relative overflow-hidden px-4 py-6 sm:px-6 md:px-10 md:py-10">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-[#e8ddc9]/45 blur-3xl" />
-        <div className="absolute bottom-10 left-0 h-56 w-56 rounded-full bg-[#cfd8c6]/30 blur-3xl" />
-        <div className="absolute right-0 top-28 h-64 w-64 rounded-full bg-[#efe4d2]/45 blur-3xl" />
-      </div>
+      <BackgroundOrnaments />
 
       <div className="relative mx-auto flex min-h-[calc(100vh-10rem)] max-w-4xl flex-col justify-center">
         <section className="space-y-6">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="font-body text-xs uppercase tracking-[0.35em] text-pine/60">
-              WhereWasIt.ai
-            </p>
-            <h1 className="mt-4 font-display text-4xl leading-tight text-pine sm:text-5xl md:text-6xl">
+            <p className="eyebrow-text">WhereWasIt.ai</p>
+            <h1 className="hero-title mt-4 font-display text-4xl leading-tight sm:text-5xl md:text-6xl">
               Lost something?
             </h1>
-            <p className="mx-auto mt-4 max-w-xl font-body text-base leading-8 text-ink/72 sm:text-lg">
+            <p className="mx-auto mt-4 max-w-xl font-body text-base leading-8 text-[#c3b797] sm:text-lg">
               {introCopy}
             </p>
           </div>
@@ -364,30 +367,28 @@ export default function HomePage() {
             <LoadingState />
           ) : hasResult && report ? (
             <div className="mx-auto w-full max-w-3xl space-y-4 sm:space-y-5">
-              <section className="rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-glow backdrop-blur sm:p-8">
+              <section className="mystery-card p-6 sm:p-8">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="font-body text-xs uppercase tracking-[0.28em] text-pine/60">
-                      Search Plan Ready
-                    </p>
-                    <h2 className="mt-3 font-display text-3xl text-pine sm:text-4xl">
+                    <p className="eyebrow-text text-[11px] text-[#b69256]">Search Plan Ready</p>
+                    <h2 className="mt-3 font-display text-3xl text-[#f2e5c8] sm:text-4xl">
                       Most Likely Area
                     </h2>
-                    <p className="mt-3 font-display text-2xl leading-tight text-ember sm:text-3xl">
+                    <p className="mt-3 font-display text-2xl leading-tight text-[#d4af6e] sm:text-3xl">
                       {report.mostLikelyArea}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
                     {usedFallback ? (
-                      <span className="rounded-full bg-gold/15 px-3 py-2 font-body text-xs uppercase tracking-[0.2em] text-gold">
+                      <span className="rounded-full border border-[rgba(212,175,110,0.18)] bg-[rgba(212,175,110,0.08)] px-3 py-2 font-body text-xs uppercase tracking-[0.2em] text-[#d4af6e]">
                         Template fallback
                       </span>
                     ) : null}
                     <button
                       type="button"
                       onClick={handleReset}
-                      className="rounded-full border border-pine/15 bg-white px-4 py-2 font-body text-sm font-semibold text-pine transition hover:bg-pine/5"
+                      className="rounded-full border border-[rgba(212,175,110,0.18)] bg-[rgba(255,255,255,0.02)] px-4 py-2 font-body text-sm font-semibold text-[#efe4c8] transition hover:border-[rgba(212,175,110,0.34)] hover:bg-[rgba(212,175,110,0.08)]"
                     >
                       New Search
                     </button>
@@ -396,7 +397,7 @@ export default function HomePage() {
               </section>
 
               <ResultCard title="Why This Makes Sense">
-                <p className="leading-8">{report.whyThisMakesSense}</p>
+                <p className="leading-8 text-[#e9dfc6]">{report.whyThisMakesSense}</p>
               </ResultCard>
 
               <ResultCard title="Recommended Search Order">
@@ -404,12 +405,12 @@ export default function HomePage() {
                   {report.prioritySearchOrder.map((step, index) => (
                     <li
                       key={`${index}-${step}`}
-                      className="flex items-start gap-3 rounded-[1.35rem] border border-sand bg-[#fffaf3] px-4 py-4"
+                      className="flex items-start gap-3 rounded-[1.35rem] border border-[rgba(212,175,110,0.14)] bg-[rgba(255,255,255,0.02)] px-4 py-4"
                     >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pine text-xs font-semibold text-white">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[rgba(212,175,110,0.2)] bg-[rgba(212,175,110,0.12)] text-xs font-semibold text-[#f3e6c8]">
                         {index + 1}
                       </span>
-                      <span className="leading-7">{step}</span>
+                      <span className="leading-7 text-[#e9dfc6]">{step}</span>
                     </li>
                   ))}
                 </ol>
@@ -420,7 +421,7 @@ export default function HomePage() {
                   {report.hiddenSpots.map((spot) => (
                     <span
                       key={spot}
-                      className="rounded-full border border-pine/15 bg-pine/5 px-3 py-2 text-sm"
+                      className="rounded-full border border-[rgba(212,175,110,0.16)] bg-[rgba(212,175,110,0.07)] px-3 py-2 text-sm text-[#e8ddc4]"
                     >
                       {spot}
                     </span>
@@ -429,20 +430,18 @@ export default function HomePage() {
               </ResultCard>
 
               <ResultCard title="Intuitive Signal">
-                <p className="leading-8">{report.wisdomSignal}</p>
+                <p className="leading-8 text-[#e9dfc6]">{report.wisdomSignal}</p>
               </ResultCard>
 
               <ResultCard title="If It Is Not There">
-                <p className="leading-8">{report.ifNotFound}</p>
+                <p className="leading-8 text-[#e9dfc6]">{report.ifNotFound}</p>
               </ResultCard>
 
-              <section className="rounded-[2rem] border border-pine/10 bg-pine/5 p-6 shadow-glow sm:p-7">
+              <section className="mystery-card p-6 sm:p-7">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-body text-sm font-semibold uppercase tracking-[0.18em] text-pine">
-                      Found It?
-                    </p>
-                    <p className="mt-2 font-body text-sm leading-7 text-ink/70">
+                    <p className="eyebrow-text text-[11px] text-[#d4af6e]">Found It?</p>
+                    <p className="mt-2 font-body text-sm leading-7 text-[#c1b69d]">
                       Your feedback helps us improve the public alpha search coach.
                     </p>
                   </div>
@@ -453,8 +452,8 @@ export default function HomePage() {
                       onClick={() => handleFeedback("found_it")}
                       className={`rounded-full px-4 py-2 font-body text-sm font-semibold transition ${
                         feedbackState === "found_it"
-                          ? "bg-pine text-white"
-                          : "border border-pine/15 bg-white text-pine hover:bg-pine/5"
+                          ? "border border-[rgba(212,175,110,0.26)] bg-[linear-gradient(135deg,rgba(181,136,55,0.55),rgba(111,82,30,0.75))] text-[#fff6e5]"
+                          : "border border-[rgba(212,175,110,0.18)] bg-[rgba(255,255,255,0.02)] text-[#efe4c8] hover:bg-[rgba(212,175,110,0.08)]"
                       }`}
                     >
                       Yes, found it
@@ -464,8 +463,8 @@ export default function HomePage() {
                       onClick={() => handleFeedback("not_yet")}
                       className={`rounded-full px-4 py-2 font-body text-sm font-semibold transition ${
                         feedbackState === "not_yet"
-                          ? "bg-ember text-white"
-                          : "border border-ember/15 bg-white text-ember hover:bg-ember/5"
+                          ? "border border-[rgba(212,175,110,0.18)] bg-[rgba(132,83,42,0.55)] text-[#fff2dc]"
+                          : "border border-[rgba(212,175,110,0.18)] bg-[rgba(255,255,255,0.02)] text-[#d8bf93] hover:bg-[rgba(212,175,110,0.08)]"
                       }`}
                     >
                       Not yet
@@ -474,7 +473,7 @@ export default function HomePage() {
                 </div>
 
                 {feedbackState ? (
-                  <p className="mt-4 font-body text-sm leading-7 text-ink/70">
+                  <p className="mt-4 font-body text-sm leading-7 text-[#c1b69d]">
                     {feedbackState === "found_it"
                       ? "That is great to hear. Thanks for helping us learn what works."
                       : "Thanks for the signal. We will use it to improve the next search pass."}
@@ -483,7 +482,7 @@ export default function HomePage() {
               </section>
 
               <details
-                className="rounded-[2rem] border border-white/70 bg-white/75 p-5 shadow-glow backdrop-blur"
+                className="mystery-card p-5"
                 open={showAdvancedAnalysis}
                 onToggle={(event) => {
                   const nextOpen = (event.currentTarget as HTMLDetailsElement).open;
@@ -491,29 +490,31 @@ export default function HomePage() {
                   trackEvent("advanced_analysis_toggled", { open: nextOpen });
                 }}
               >
-                <summary className="cursor-pointer list-none font-body text-sm font-semibold uppercase tracking-[0.2em] text-pine">
+                <summary className="cursor-pointer list-none font-body text-sm font-semibold uppercase tracking-[0.2em] text-[#d4af6e]">
                   Advanced analysis
                 </summary>
 
                 {analysis ? (
-                  <div className="mt-5 space-y-5 font-body text-sm leading-7 text-ink/78">
+                  <div className="mt-5 space-y-5 font-body text-sm leading-7 text-[#c7bb9f]">
                     <div>
-                      <p className="uppercase tracking-[0.24em] text-ink/50">Extracted</p>
+                      <p className="uppercase tracking-[0.24em] text-[#a98b56]">Extracted</p>
                       <p className="mt-2">
-                        <strong>Item:</strong> {analysis.input.itemType}
+                        <strong className="text-[#efe4c8]">Item:</strong> {analysis.input.itemType}
                         <br />
-                        <strong>Category:</strong> {analysis.itemCategory}
+                        <strong className="text-[#efe4c8]">Category:</strong> {analysis.itemCategory}
                         <br />
-                        <strong>Last seen:</strong> {analysis.input.lastSeenLocation}
+                        <strong className="text-[#efe4c8]">Last seen:</strong>{" "}
+                        {analysis.input.lastSeenLocation}
                         <br />
-                        <strong>Time:</strong> {analysis.input.lastSeenTime}
+                        <strong className="text-[#efe4c8]">Time:</strong> {analysis.input.lastSeenTime}
                         <br />
-                        <strong>Gap:</strong> {analysis.memory.timeGapLabel}
+                        <strong className="text-[#efe4c8]">Gap:</strong>{" "}
+                        {analysis.memory.timeGapLabel}
                       </p>
                     </div>
 
                     <div>
-                      <p className="uppercase tracking-[0.24em] text-ink/50">Transition moments</p>
+                      <p className="uppercase tracking-[0.24em] text-[#a98b56]">Transition moments</p>
                       <p className="mt-2">
                         {analysis.memory.transitionMoments.length > 0
                           ? analysis.memory.transitionMoments.join(", ")
@@ -522,11 +523,15 @@ export default function HomePage() {
                     </div>
 
                     <div>
-                      <p className="uppercase tracking-[0.24em] text-ink/50">Top local signals</p>
+                      <p className="uppercase tracking-[0.24em] text-[#a98b56]">Top local signals</p>
                       <ul className="mt-2 space-y-2">
                         {analysis.probabilities.slice(0, 3).map((entry) => (
-                          <li key={entry.location} className="rounded-2xl bg-pine/5 px-4 py-3">
-                            <strong>{entry.location}</strong> ({entry.score}/100): {entry.reasons[0]}
+                          <li
+                            key={entry.location}
+                            className="rounded-2xl border border-[rgba(212,175,110,0.12)] bg-[rgba(255,255,255,0.02)] px-4 py-3"
+                          >
+                            <strong className="text-[#efe4c8]">{entry.location}</strong> ({entry.score}
+                            /100): {entry.reasons[0]}
                           </li>
                         ))}
                       </ul>
@@ -536,18 +541,19 @@ export default function HomePage() {
               </details>
             </div>
           ) : (
-            <section className="mx-auto w-full max-w-3xl rounded-[2rem] border border-white/70 bg-white/84 p-5 shadow-glow backdrop-blur sm:p-7 md:p-8">
-              <form className="space-y-4" onSubmit={handleSubmit}>
-                <div className="rounded-[1.5rem] border border-pine/10 bg-pine/5 p-4 sm:p-5">
-                  <p className="font-body text-sm leading-7 text-ink/68">
-                    The more details you provide, the better your chances of finding your item.
+            <section className="mystery-card mx-auto w-full max-w-3xl p-5 sm:p-7 md:p-8">
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                <div className="rounded-[1.6rem] border border-[rgba(212,175,110,0.12)] bg-[rgba(255,255,255,0.025)] p-4 sm:p-5">
+                  <p className="font-body text-sm leading-7 text-[#c3b797]">
+                    These details are optional, but they can help us narrow the search.
+                  </p>
+                  <p className="mt-1 font-body text-sm leading-7 text-[#9f9379]">
+                    Your story is still the most important clue.
                   </p>
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <label className="block">
-                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                        Item
-                      </span>
+                      <span className="eyebrow-text text-[11px] text-[#b69256]">Item</span>
                       <select
                         value={details.selectedItemType ?? ""}
                         onChange={(event) => {
@@ -556,14 +562,11 @@ export default function HomePage() {
                             setCustomItemType("");
                           }
                         }}
-                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        className={fieldClassName}
                       >
                         <option value="">Optional</option>
                         {itemTypeOptions.map((option) => (
-                          <option
-                            key={option}
-                            value={option === "Other..." ? OTHER_OPTION : option}
-                          >
+                          <option key={option} value={option === "Other..." ? OTHER_OPTION : option}>
                             {option}
                           </option>
                         ))}
@@ -574,15 +577,13 @@ export default function HomePage() {
                           value={customItemType}
                           onChange={(event) => setCustomItemType(event.target.value)}
                           placeholder="Type your item"
-                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                          className={fieldClassName}
                         />
                       ) : null}
                     </label>
 
                     <label className="block">
-                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                        Last known place
-                      </span>
+                      <span className="eyebrow-text text-[11px] text-[#b69256]">Last known place</span>
                       <select
                         value={details.selectedPlace ?? ""}
                         onChange={(event) => {
@@ -591,14 +592,11 @@ export default function HomePage() {
                             setCustomPlace("");
                           }
                         }}
-                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        className={fieldClassName}
                       >
                         <option value="">Optional</option>
                         {placeOptions.map((option) => (
-                          <option
-                            key={option}
-                            value={option === "Other..." ? OTHER_OPTION : option}
-                          >
+                          <option key={option} value={option === "Other..." ? OTHER_OPTION : option}>
                             {option}
                           </option>
                         ))}
@@ -609,15 +607,13 @@ export default function HomePage() {
                           value={customPlace}
                           onChange={(event) => setCustomPlace(event.target.value)}
                           placeholder="Type a place"
-                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                          className={fieldClassName}
                         />
                       ) : null}
                     </label>
 
                     <label className="block">
-                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                        Approximate time
-                      </span>
+                      <span className="eyebrow-text text-[11px] text-[#b69256]">Approximate time</span>
                       <select
                         value={details.selectedTimeMode ?? "not_sure"}
                         onChange={(event) =>
@@ -626,7 +622,7 @@ export default function HomePage() {
                             event.target.value as OptionalDetailInputs["selectedTimeMode"]
                           )
                         }
-                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        className={fieldClassName}
                       >
                         {timeOptions.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -638,7 +634,7 @@ export default function HomePage() {
                         <select
                           value={details.selectedHour ?? ""}
                           onChange={(event) => updateDetail("selectedHour", event.target.value)}
-                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                          className={fieldClassName}
                         >
                           <option value="">Choose an hour</option>
                           {hourOptions.map((option) => (
@@ -651,9 +647,7 @@ export default function HomePage() {
                     </label>
 
                     <label className="block">
-                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                        Date (optional)
-                      </span>
+                      <span className="eyebrow-text text-[11px] text-[#b69256]">Date (optional)</span>
                       <select
                         value={details.selectedDateMode ?? "not_sure"}
                         onChange={(event) =>
@@ -662,7 +656,7 @@ export default function HomePage() {
                             event.target.value as OptionalDetailInputs["selectedDateMode"]
                           )
                         }
-                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        className={fieldClassName}
                       >
                         {dateOptions.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -675,7 +669,7 @@ export default function HomePage() {
                           type="date"
                           value={details.selectedDate ?? ""}
                           onChange={(event) => updateDetail("selectedDate", event.target.value)}
-                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                          className={fieldClassName}
                         />
                       ) : null}
                     </label>
@@ -683,7 +677,7 @@ export default function HomePage() {
                 </div>
 
                 <textarea
-                  className="min-h-56 w-full rounded-[1.9rem] border border-sand bg-[#fffaf3] px-5 py-5 font-body text-base leading-8 text-ink shadow-sm outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/20 disabled:cursor-not-allowed disabled:opacity-70 sm:min-h-64 sm:text-lg"
+                  className="min-h-56 w-full rounded-[1.7rem] border border-[rgba(212,175,110,0.22)] bg-[rgba(0,0,0,0.45)] px-5 py-5 font-body text-base leading-8 text-[#efe4c8] shadow-[0_0_0_1px_rgba(212,175,110,0.02),0_24px_70px_rgba(0,0,0,0.32)] outline-none transition placeholder:text-[#7f7766] focus:border-[#d4af6e] focus:ring-2 focus:ring-[rgba(212,175,110,0.18)] disabled:cursor-not-allowed disabled:opacity-70 sm:min-h-64 sm:text-lg"
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   disabled={isLoading}
@@ -694,9 +688,9 @@ export default function HomePage() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="rounded-full bg-pine px-7 py-3 font-body text-sm font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-[#1f3a35] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="gold-button rounded-full px-8 py-3 font-body text-sm font-semibold uppercase tracking-[0.26em] text-[#fff5e6] disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    Build My Search Plan
+                    Find My Item
                   </button>
 
                   <div className="flex flex-wrap items-center justify-center gap-2">
@@ -705,8 +699,9 @@ export default function HomePage() {
                         key={example.label}
                         type="button"
                         onClick={() => handleExampleClick(example.value, example.label)}
-                        className="rounded-full border border-pine/10 bg-pine/5 px-4 py-2 font-body text-sm text-pine transition hover:bg-pine/10"
+                        className="inline-flex items-center gap-2 rounded-full border border-[rgba(212,175,110,0.18)] bg-[rgba(255,255,255,0.025)] px-4 py-2 font-body text-sm text-[#d8c39a] transition hover:border-[rgba(212,175,110,0.3)] hover:bg-[rgba(212,175,110,0.08)]"
                       >
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#d4af6e]" />
                         {example.label}
                       </button>
                     ))}
@@ -715,24 +710,22 @@ export default function HomePage() {
               </form>
 
               {error ? (
-                <div className="mt-5 rounded-[1.5rem] border border-ember/20 bg-ember/10 px-5 py-4">
-                  <p className="font-body text-sm font-semibold uppercase tracking-[0.18em] text-ember">
-                    We hit a snag
-                  </p>
-                  <p className="mt-2 font-body text-sm leading-7 text-ember">
+                <div className="mt-5 rounded-[1.5rem] border border-[rgba(164,90,48,0.28)] bg-[rgba(94,39,14,0.26)] px-5 py-4">
+                  <p className="eyebrow-text text-[11px] text-[#dca76d]">We hit a snag</p>
+                  <p className="mt-2 font-body text-sm leading-7 text-[#ecd9bb]">
                     {error} Try shortening the story to the last confirmed moment, then the next
                     place you went.
                   </p>
                 </div>
               ) : null}
 
-              <div className="mt-6 text-center font-body text-sm leading-7 text-ink/58">
+              <div className="mt-6 text-center font-body text-sm leading-7 text-[#8e846e]">
                 <p>No login, no payment, and no saved history in this public alpha version.</p>
                 <p className="mt-2">
                   Review our{" "}
                   <Link
                     href="/privacy"
-                    className="text-pine underline decoration-pine/30 underline-offset-4"
+                    className="text-[#d4af6e] underline decoration-[rgba(212,175,110,0.35)] underline-offset-4"
                     onClick={() => trackEvent("inline_link_clicked", { href: "/privacy" })}
                   >
                     Privacy Policy
@@ -740,7 +733,7 @@ export default function HomePage() {
                   and{" "}
                   <Link
                     href="/terms"
-                    className="text-pine underline decoration-pine/30 underline-offset-4"
+                    className="text-[#d4af6e] underline decoration-[rgba(212,175,110,0.35)] underline-offset-4"
                     onClick={() => trackEvent("inline_link_clicked", { href: "/terms" })}
                   >
                     Terms
