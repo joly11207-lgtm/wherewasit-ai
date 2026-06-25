@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { trackEvent } from "@/lib/analytics";
 import { LocalAnalysis, OptionalDetailInputs, ReportSections } from "@/lib/types";
@@ -14,6 +14,23 @@ type AnalyzeResponse = {
 };
 
 type FeedbackState = "found_it" | "not_yet" | null;
+
+const examplePrompts = [
+  {
+    label: "AirPods",
+    value: "I lost my AirPods. I last used them in my bedroom this morning, then drove to work."
+  },
+  {
+    label: "Wedding ring",
+    value:
+      "I misplaced my wedding ring. I took it off in the bathroom before showering, then changed clothes in the bedroom."
+  },
+  {
+    label: "Wallet",
+    value:
+      "I can't find my wallet. I used it at the grocery store, drove home, carried bags inside, and dropped things on the kitchen counter."
+  }
+];
 
 const itemTypeOptions = [
   "Keys",
@@ -49,12 +66,12 @@ const dateOptions = [
 ];
 
 const timeOptions = [
-  { value: "early_morning", label: "Early morning (5–8)" },
-  { value: "morning", label: "Morning (8–12)" },
-  { value: "afternoon", label: "Afternoon (12–5)" },
-  { value: "evening", label: "Evening (5–9)" },
-  { value: "night", label: "Night (9–12)" },
-  { value: "late_night", label: "Late night (12–5)" },
+  { value: "early_morning", label: "Early morning (5-8)" },
+  { value: "morning", label: "Morning (8-12)" },
+  { value: "afternoon", label: "Afternoon (12-5)" },
+  { value: "evening", label: "Evening (5-9)" },
+  { value: "night", label: "Night (9-12)" },
+  { value: "late_night", label: "Late night (12-5)" },
   { value: "approximate_hour", label: "Approximate hour" },
   { value: "not_sure", label: "Not sure" }
 ];
@@ -86,36 +103,89 @@ const hourOptions = [
   "12 AM"
 ];
 
-const examplePrompts = [
-  "I lost my AirPods. I last used them in my bedroom this morning, then drove to work.",
-  "I misplaced my wedding ring. I took it off in the bathroom before showering, then changed clothes in the bedroom.",
-  "I can't find my wallet. I used it at the grocery store, drove home, carried bags inside, and dropped things on the kitchen counter."
+const loadingSteps = [
+  "Analyzing your timeline...",
+  "Checking habit patterns...",
+  "Looking for overlooked places...",
+  "Preparing your search plan..."
 ];
 
-function LoadingReport() {
+function LoadingState() {
+  const [activeStep, setActiveStep] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveStep((current) => Math.min(current + 1, loadingSteps.length - 1));
+    }, 900);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
-    <div className="mt-6 space-y-4 animate-pulse">
-      <div className="rounded-3xl bg-pine/6 p-5">
-        <div className="h-3 w-32 rounded-full bg-pine/15" />
-        <div className="mt-4 h-8 w-3/4 rounded-full bg-ember/20" />
-      </div>
-      <div className="space-y-3 rounded-3xl border border-sand bg-[#fffaf3] p-5">
-        <div className="h-3 w-40 rounded-full bg-pine/12" />
-        <div className="h-12 rounded-2xl bg-pine/8" />
-        <div className="h-12 rounded-2xl bg-pine/8" />
-        <div className="h-12 rounded-2xl bg-pine/8" />
-      </div>
-      <div className="rounded-3xl border border-pine/10 bg-pine/5 p-5">
-        <p className="font-body text-sm leading-7 text-pine/80">
-          Tracing the timeline, checking habit patterns, and building your first search pass.
+    <div className="rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-glow backdrop-blur sm:p-8">
+      <div className="mx-auto max-w-2xl text-center">
+        <p className="font-body text-xs uppercase tracking-[0.28em] text-pine/60">Tracing Clues</p>
+        <h2 className="mt-3 font-display text-3xl text-pine sm:text-4xl">
+          Building your search plan
+        </h2>
+        <p className="mt-3 font-body text-sm leading-7 text-ink/65 sm:text-base">
+          We are retracing your steps, weighing routine patterns, and preparing a calm second pass.
         </p>
+      </div>
+
+      <div className="mx-auto mt-8 max-w-2xl space-y-3">
+        {loadingSteps.map((step, index) => {
+          const isComplete = index < activeStep;
+          const isActive = index === activeStep;
+
+          return (
+            <div
+              key={step}
+              className={`flex items-center gap-3 rounded-[1.35rem] px-4 py-4 transition ${
+                isActive
+                  ? "bg-pine text-white"
+                  : isComplete
+                    ? "bg-pine/8 text-pine"
+                    : "bg-[#fffaf3] text-ink/55"
+              }`}
+            >
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full border font-body text-xs font-semibold uppercase tracking-[0.16em] ${
+                  isActive
+                    ? "border-white/35 bg-white/15"
+                    : isComplete
+                      ? "border-pine/15 bg-pine/10"
+                      : "border-sand bg-white"
+                }`}
+              >
+                {isComplete ? "Done" : isActive ? "Now" : `${index + 1}`}
+              </div>
+              <p className="font-body text-sm sm:text-base">{step}</p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
+function ResultCard({
+  title,
+  children
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-[2rem] border border-white/70 bg-white/82 p-6 shadow-glow backdrop-blur sm:p-7">
+      <h3 className="font-body text-sm uppercase tracking-[0.24em] text-ink/55">{title}</h3>
+      <div className="mt-4 font-body text-ink/82">{children}</div>
+    </section>
+  );
+}
+
 export default function HomePage() {
-  const [input, setInput] = useState(examplePrompts[0]);
+  const [input, setInput] = useState("");
   const [report, setReport] = useState<ReportSections | null>(null);
   const [analysis, setAnalysis] = useState<LocalAnalysis | null>(null);
   const [usedFallback, setUsedFallback] = useState(false);
@@ -123,10 +193,21 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<FeedbackState>(null);
   const [showOptionalDetails, setShowOptionalDetails] = useState(false);
+  const [showAdvancedAnalysis, setShowAdvancedAnalysis] = useState(false);
   const [details, setDetails] = useState<OptionalDetailInputs>({
     selectedDateMode: "not_sure",
     selectedTimeMode: "not_sure"
   });
+
+  const hasResult = Boolean(report);
+
+  const introCopy = useMemo(() => {
+    if (hasResult) {
+      return "Your search plan is ready. Start with the most likely area first, then widen carefully if needed.";
+    }
+
+    return "Describe what happened. We'll help you retrace the clues.";
+  }, [hasResult]);
 
   useEffect(() => {
     if (report && analysis) {
@@ -137,16 +218,17 @@ export default function HomePage() {
     }
   }, [report, analysis, usedFallback]);
 
-  function handleExampleClick(example: string) {
-    setInput(example);
-    trackEvent("example_prompt_selected", { example });
-  }
-
   function updateDetail<K extends keyof OptionalDetailInputs>(
     key: K,
     value: OptionalDetailInputs[K]
   ) {
     setDetails((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleExampleClick(example: string, label: string) {
+    setInput(example);
+    setError(null);
+    trackEvent("example_prompt_selected", { example: label });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -161,6 +243,7 @@ export default function HomePage() {
     setError(null);
     setUsedFallback(false);
     setFeedbackState(null);
+    setShowAdvancedAnalysis(false);
     trackEvent("analysis_started", {
       inputLength: input.trim().length,
       usedOptionalDetails: showOptionalDetails
@@ -215,487 +298,414 @@ export default function HomePage() {
     });
   }
 
+  function handleReset() {
+    setInput("");
+    setReport(null);
+    setAnalysis(null);
+    setError(null);
+    setIsLoading(false);
+    setUsedFallback(false);
+    setFeedbackState(null);
+    setShowOptionalDetails(false);
+    setShowAdvancedAnalysis(false);
+    setDetails({
+      selectedDateMode: "not_sure",
+      selectedTimeMode: "not_sure"
+    });
+    trackEvent("new_search_started");
+  }
+
   return (
     <main className="relative overflow-hidden px-4 py-6 sm:px-6 md:px-10 md:py-10">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 md:gap-10">
-        <header className="rounded-[2rem] border border-white/70 bg-white/65 px-5 py-5 shadow-glow backdrop-blur md:px-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="font-body text-xs uppercase tracking-[0.35em] text-pine/65">
-                WhereWasIt.ai Public Alpha
-              </p>
-              <h1 className="mt-2 font-display text-4xl leading-tight text-pine sm:text-5xl md:text-6xl">
-                Lost something?
-                <span className="block text-ember">Let&apos;s retrace the clues.</span>
-              </h1>
-              <p className="mt-4 max-w-2xl font-body text-base leading-7 text-ink/75 sm:text-lg">
-                A calm search coach for English-speaking users. We combine memory cues, habit
-                patterns, and practical search signals to help you start in the right place.
-              </p>
-            </div>
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-[#e8ddc9]/45 blur-3xl" />
+        <div className="absolute bottom-10 left-0 h-56 w-56 rounded-full bg-[#cfd8c6]/30 blur-3xl" />
+        <div className="absolute right-0 top-28 h-64 w-64 rounded-full bg-[#efe4d2]/45 blur-3xl" />
+      </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:w-[28rem]">
-              {[
-                "No login required",
-                "Built for quick first searches",
-                "Public alpha this week"
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-[1.5rem] border border-pine/10 bg-pine/5 px-4 py-4 font-body text-sm leading-6 text-pine"
-                >
-                  {item}
-                </div>
-              ))}
-            </div>
+      <div className="relative mx-auto flex min-h-[calc(100vh-10rem)] max-w-4xl flex-col justify-center">
+        <section className="space-y-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="font-body text-xs uppercase tracking-[0.35em] text-pine/60">
+              WhereWasIt.ai
+            </p>
+            <h1 className="mt-4 font-display text-4xl leading-tight text-pine sm:text-5xl md:text-6xl">
+              Lost something?
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl font-body text-base leading-8 text-ink/72 sm:text-lg">
+              {introCopy}
+            </p>
           </div>
-        </header>
 
-        <section className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="rounded-[2rem] border border-white/70 bg-white/75 p-5 shadow-glow backdrop-blur sm:p-7 md:p-8">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-body text-sm uppercase tracking-[0.24em] text-ink/55">
-                  Start Here
-                </p>
-                <p className="mt-2 font-body text-sm leading-7 text-ink/70">
-                  Tell us what you lost, where you last remember using it, and what happened next.
-                </p>
-              </div>
-              <div className="rounded-full bg-gold/12 px-4 py-2 font-body text-xs uppercase tracking-[0.18em] text-gold">
-                Alpha feedback welcome
-              </div>
+          {isLoading ? (
+            <LoadingState />
+          ) : hasResult && report ? (
+            <div className="mx-auto w-full max-w-3xl space-y-4 sm:space-y-5">
+              <section className="rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-glow backdrop-blur sm:p-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-body text-xs uppercase tracking-[0.28em] text-pine/60">
+                      Search Plan Ready
+                    </p>
+                    <h2 className="mt-3 font-display text-3xl text-pine sm:text-4xl">
+                      Most Likely Area
+                    </h2>
+                    <p className="mt-3 font-display text-2xl leading-tight text-ember sm:text-3xl">
+                      {report.mostLikelyArea}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {usedFallback ? (
+                      <span className="rounded-full bg-gold/15 px-3 py-2 font-body text-xs uppercase tracking-[0.2em] text-gold">
+                        Template fallback
+                      </span>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={handleReset}
+                      className="rounded-full border border-pine/15 bg-white px-4 py-2 font-body text-sm font-semibold text-pine transition hover:bg-pine/5"
+                    >
+                      New Search
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <ResultCard title="Why This Makes Sense">
+                <p className="leading-8">{report.whyThisMakesSense}</p>
+              </ResultCard>
+
+              <ResultCard title="Recommended Search Order">
+                <ol className="space-y-3">
+                  {report.prioritySearchOrder.map((step, index) => (
+                    <li
+                      key={`${index}-${step}`}
+                      className="flex items-start gap-3 rounded-[1.35rem] border border-sand bg-[#fffaf3] px-4 py-4"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pine text-xs font-semibold text-white">
+                        {index + 1}
+                      </span>
+                      <span className="leading-7">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </ResultCard>
+
+              <ResultCard title="Hidden Spots To Check">
+                <div className="flex flex-wrap gap-2">
+                  {report.hiddenSpots.map((spot) => (
+                    <span
+                      key={spot}
+                      className="rounded-full border border-pine/15 bg-pine/5 px-3 py-2 text-sm"
+                    >
+                      {spot}
+                    </span>
+                  ))}
+                </div>
+              </ResultCard>
+
+              <ResultCard title="Intuitive Signal">
+                <p className="leading-8">{report.wisdomSignal}</p>
+              </ResultCard>
+
+              <ResultCard title="If It Is Not There">
+                <p className="leading-8">{report.ifNotFound}</p>
+              </ResultCard>
+
+              <section className="rounded-[2rem] border border-pine/10 bg-pine/5 p-6 shadow-glow sm:p-7">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-body text-sm font-semibold uppercase tracking-[0.18em] text-pine">
+                      Found It?
+                    </p>
+                    <p className="mt-2 font-body text-sm leading-7 text-ink/70">
+                      Your feedback helps us improve the public alpha search coach.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleFeedback("found_it")}
+                      className={`rounded-full px-4 py-2 font-body text-sm font-semibold transition ${
+                        feedbackState === "found_it"
+                          ? "bg-pine text-white"
+                          : "border border-pine/15 bg-white text-pine hover:bg-pine/5"
+                      }`}
+                    >
+                      Yes, found it
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleFeedback("not_yet")}
+                      className={`rounded-full px-4 py-2 font-body text-sm font-semibold transition ${
+                        feedbackState === "not_yet"
+                          ? "bg-ember text-white"
+                          : "border border-ember/15 bg-white text-ember hover:bg-ember/5"
+                      }`}
+                    >
+                      Not yet
+                    </button>
+                  </div>
+                </div>
+
+                {feedbackState ? (
+                  <p className="mt-4 font-body text-sm leading-7 text-ink/70">
+                    {feedbackState === "found_it"
+                      ? "That is great to hear. Thanks for helping us learn what works."
+                      : "Thanks for the signal. We will use it to improve the next search pass."}
+                  </p>
+                ) : null}
+              </section>
+
+              <details
+                className="rounded-[2rem] border border-white/70 bg-white/75 p-5 shadow-glow backdrop-blur"
+                open={showAdvancedAnalysis}
+                onToggle={(event) => {
+                  const nextOpen = (event.currentTarget as HTMLDetailsElement).open;
+                  setShowAdvancedAnalysis(nextOpen);
+                  trackEvent("advanced_analysis_toggled", { open: nextOpen });
+                }}
+              >
+                <summary className="cursor-pointer list-none font-body text-sm font-semibold uppercase tracking-[0.2em] text-pine">
+                  Advanced analysis
+                </summary>
+
+                {analysis ? (
+                  <div className="mt-5 space-y-5 font-body text-sm leading-7 text-ink/78">
+                    <div>
+                      <p className="uppercase tracking-[0.24em] text-ink/50">Extracted</p>
+                      <p className="mt-2">
+                        <strong>Item:</strong> {analysis.input.itemType}
+                        <br />
+                        <strong>Category:</strong> {analysis.itemCategory}
+                        <br />
+                        <strong>Last seen:</strong> {analysis.input.lastSeenLocation}
+                        <br />
+                        <strong>Time:</strong> {analysis.input.lastSeenTime}
+                        <br />
+                        <strong>Gap:</strong> {analysis.memory.timeGapLabel}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="uppercase tracking-[0.24em] text-ink/50">Transition moments</p>
+                      <p className="mt-2">
+                        {analysis.memory.transitionMoments.length > 0
+                          ? analysis.memory.transitionMoments.join(", ")
+                          : "No major transition moments detected"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="uppercase tracking-[0.24em] text-ink/50">Top local signals</p>
+                      <ul className="mt-2 space-y-2">
+                        {analysis.probabilities.slice(0, 3).map((entry) => (
+                          <li key={entry.location} className="rounded-2xl bg-pine/5 px-4 py-3">
+                            <strong>{entry.location}</strong> ({entry.score}/100): {entry.reasons[0]}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ) : null}
+              </details>
             </div>
+          ) : (
+            <section className="mx-auto w-full max-w-3xl rounded-[2rem] border border-white/70 bg-white/84 p-5 shadow-glow backdrop-blur sm:p-7 md:p-8">
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <textarea
+                  className="min-h-56 w-full rounded-[1.9rem] border border-sand bg-[#fffaf3] px-5 py-5 font-body text-base leading-8 text-ink shadow-sm outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/20 disabled:cursor-not-allowed disabled:opacity-70 sm:min-h-64 sm:text-lg"
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  disabled={isLoading}
+                  placeholder="I lost my AirPods. I last used them in my bedroom this morning, then drove to work."
+                />
 
-            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-              <label className="block font-body text-sm font-medium uppercase tracking-[0.2em] text-ink/60">
-                Tell me what you lost and what happened.
-              </label>
-              <textarea
-                className="min-h-44 w-full rounded-[1.5rem] border border-sand bg-[#fffaf3] px-5 py-4 font-body text-base leading-7 text-ink shadow-sm outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/20 disabled:cursor-not-allowed disabled:opacity-70"
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                disabled={isLoading}
-                placeholder="I lost my keys. I had them in the kitchen after lunch, then I rushed out to the car."
-              />
+                <div className="rounded-[1.35rem] border border-pine/10 bg-pine/5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextState = !showOptionalDetails;
+                      setShowOptionalDetails(nextState);
+                      trackEvent("optional_details_toggled", { expanded: nextState });
+                    }}
+                    className="flex w-full items-center justify-between px-4 py-3 text-left font-body text-sm font-semibold text-pine transition hover:bg-pine/5"
+                  >
+                    <span>+ Add more details (optional)</span>
+                    <span className="text-xs uppercase tracking-[0.16em] text-pine/60">
+                      {showOptionalDetails ? "Hide" : "Show"}
+                    </span>
+                  </button>
 
-              <div className="rounded-[1.25rem] border border-pine/10 bg-pine/5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextState = !showOptionalDetails;
-                    setShowOptionalDetails(nextState);
-                    trackEvent("optional_details_toggled", { expanded: nextState });
-                  }}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left font-body text-sm font-semibold text-pine transition hover:bg-pine/5"
-                >
-                  <span>+ Add more details (optional)</span>
-                  <span className="text-xs uppercase tracking-[0.16em] text-pine/60">
-                    {showOptionalDetails ? "Hide" : "Show"}
-                  </span>
-                </button>
-
-                {showOptionalDetails ? (
-                  <div className="grid gap-4 border-t border-pine/10 px-4 py-4 md:grid-cols-2">
-                    <label className="block">
-                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                        Item type
-                      </span>
-                      <select
-                        value={details.selectedItemType ?? ""}
-                        onChange={(event) => updateDetail("selectedItemType", event.target.value)}
-                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
-                      >
-                        <option value="">Use only my story</option>
-                        {itemTypeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block">
-                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                        Last known place
-                      </span>
-                      <select
-                        value={details.selectedPlace ?? ""}
-                        onChange={(event) => updateDetail("selectedPlace", event.target.value)}
-                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
-                      >
-                        <option value="">Use only my story</option>
-                        {placeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block">
-                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                        Last seen date
-                      </span>
-                      <select
-                        value={details.selectedDateMode ?? "not_sure"}
-                        onChange={(event) =>
-                          updateDetail(
-                            "selectedDateMode",
-                            event.target.value as OptionalDetailInputs["selectedDateMode"]
-                          )
-                        }
-                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
-                      >
-                        {dateOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      {details.selectedDateMode === "pick_date" ? (
-                        <input
-                          type="date"
-                          value={details.selectedDate ?? ""}
-                          onChange={(event) => updateDetail("selectedDate", event.target.value)}
-                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
-                        />
-                      ) : null}
-                    </label>
-
-                    <label className="block">
-                      <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
-                        Approximate time
-                      </span>
-                      <select
-                        value={details.selectedTimeMode ?? "not_sure"}
-                        onChange={(event) =>
-                          updateDetail(
-                            "selectedTimeMode",
-                            event.target.value as OptionalDetailInputs["selectedTimeMode"]
-                          )
-                        }
-                        className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
-                      >
-                        {timeOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      {details.selectedTimeMode === "approximate_hour" ? (
+                  {showOptionalDetails ? (
+                    <div className="grid gap-4 border-t border-pine/10 px-4 py-4 md:grid-cols-2">
+                      <label className="block">
+                        <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                          Item type
+                        </span>
                         <select
-                          value={details.selectedHour ?? ""}
-                          onChange={(event) => updateDetail("selectedHour", event.target.value)}
+                          value={details.selectedItemType ?? ""}
+                          onChange={(event) => updateDetail("selectedItemType", event.target.value)}
                           className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
                         >
-                          <option value="">Choose an hour</option>
-                          {hourOptions.map((option) => (
+                          <option value="">Use only my story</option>
+                          {itemTypeOptions.map((option) => (
                             <option key={option} value={option}>
                               {option}
                             </option>
                           ))}
                         </select>
-                      ) : null}
-                    </label>
-                  </div>
-                ) : null}
-              </div>
+                      </label>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="rounded-full bg-pine px-6 py-3 font-body text-sm font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-[#1f3a35] disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {isLoading ? "Tracing the clues..." : "Build my search plan"}
-                </button>
-                <p className="font-body text-sm leading-6 text-ink/60">
-                  No payment, no account, no saved history in this alpha version.
-                </p>
-              </div>
-            </form>
+                      <label className="block">
+                        <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                          Last known place
+                        </span>
+                        <select
+                          value={details.selectedPlace ?? ""}
+                          onChange={(event) => updateDetail("selectedPlace", event.target.value)}
+                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        >
+                          <option value="">Use only my story</option>
+                          {placeOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
 
-            <div className="mt-6">
-              <p className="font-body text-xs uppercase tracking-[0.24em] text-ink/45">
-                Try an example
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {examplePrompts.map((example) => (
-                  <button
-                    key={example}
-                    type="button"
-                    onClick={() => handleExampleClick(example)}
-                    className="rounded-full border border-pine/10 bg-pine/5 px-4 py-2 text-left font-body text-sm text-pine transition hover:bg-pine/10"
-                  >
-                    {example}
-                  </button>
-                ))}
-              </div>
-            </div>
+                      <label className="block">
+                        <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                          Last seen date
+                        </span>
+                        <select
+                          value={details.selectedDateMode ?? "not_sure"}
+                          onChange={(event) =>
+                            updateDetail(
+                              "selectedDateMode",
+                              event.target.value as OptionalDetailInputs["selectedDateMode"]
+                            )
+                          }
+                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        >
+                          {dateOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        {details.selectedDateMode === "pick_date" ? (
+                          <input
+                            type="date"
+                            value={details.selectedDate ?? ""}
+                            onChange={(event) => updateDetail("selectedDate", event.target.value)}
+                            className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                          />
+                        ) : null}
+                      </label>
 
-            {error ? (
-              <div className="mt-5 rounded-[1.5rem] border border-ember/20 bg-ember/10 px-5 py-4">
-                <p className="font-body text-sm font-semibold uppercase tracking-[0.18em] text-ember">
-                  We hit a snag
-                </p>
-                <p className="mt-2 font-body text-sm leading-7 text-ember">
-                  {error} Try shortening the story to the last confirmed moment, then the next
-                  place you went.
-                </p>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="rounded-[2rem] border border-pine/10 bg-pine p-5 text-white shadow-glow sm:p-7 md:p-8">
-            <p className="font-body text-sm uppercase tracking-[0.32em] text-white/60">
-              What you get
-            </p>
-            <div className="mt-5 space-y-4 font-body text-[15px] leading-7 text-white/85">
-              <p>A clear starting area instead of a vague hunch.</p>
-              <p>A practical search order shaped by your timeline and habit patterns.</p>
-              <p>One intuitive signal to help you check the overlooked spot before widening out.</p>
-            </div>
-            <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/10 p-5">
-              <p className="font-body text-xs uppercase tracking-[0.28em] text-white/55">
-                Public alpha promise
-              </p>
-              <p className="mt-3 font-body text-sm leading-7 text-white/80">
-                We do not claim prediction. We help you retrace your steps, organize the clues,
-                and start with the most likely search zones.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {["Most Likely Area", "Recommended Search Order", "Hidden Spots", "Intuitive Signal"].map(
-                  (item) => (
-                    <span
-                      key={item}
-                      className="rounded-full border border-white/10 bg-white/10 px-3 py-2 font-body text-xs uppercase tracking-[0.16em] text-sand"
-                    >
-                      {item}
-                    </span>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-[2rem] border border-white/70 bg-white/80 p-5 shadow-glow backdrop-blur sm:p-7 md:p-8">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="font-display text-3xl text-pine">Recovery Report</h2>
-                <p className="mt-2 font-body text-sm leading-7 text-ink/65">
-                  Your first search pass appears here after analysis.
-                </p>
-              </div>
-              {usedFallback ? (
-                <span className="rounded-full bg-gold/15 px-3 py-1 font-body text-xs uppercase tracking-[0.2em] text-gold">
-                  Template fallback
-                </span>
-              ) : null}
-            </div>
-
-            {isLoading ? (
-              <LoadingReport />
-            ) : report ? (
-              <div className="mt-6 space-y-6 font-body text-ink/85">
-                <div>
-                  <h3 className="font-body text-sm uppercase tracking-[0.24em] text-ink/55">
-                    Most Likely Area
-                  </h3>
-                  <p className="mt-2 font-display text-3xl leading-tight text-ember">
-                    {report.mostLikelyArea}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="font-body text-sm uppercase tracking-[0.24em] text-ink/55">
-                    Why This Makes Sense
-                  </h3>
-                  <p className="mt-2 leading-7">{report.whyThisMakesSense}</p>
-                </div>
-
-                <div>
-                  <h3 className="font-body text-sm uppercase tracking-[0.24em] text-ink/55">
-                    Recommended Search Order
-                  </h3>
-                  <ul className="mt-3 space-y-3">
-                    {report.prioritySearchOrder.map((step) => (
-                      <li
-                        key={step}
-                        className="rounded-2xl border border-sand bg-[#fffaf3] px-4 py-3 leading-7"
-                      >
-                        {step}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="font-body text-sm uppercase tracking-[0.24em] text-ink/55">
-                    Hidden Spots To Check
-                  </h3>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {report.hiddenSpots.map((spot) => (
-                      <span
-                        key={spot}
-                        className="rounded-full border border-pine/15 bg-pine/5 px-3 py-2 text-sm"
-                      >
-                        {spot}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-body text-sm uppercase tracking-[0.24em] text-ink/55">
-                    Intuitive Signal
-                  </h3>
-                  <p className="mt-2 leading-7">{report.wisdomSignal}</p>
-                </div>
-
-                <div>
-                  <h3 className="font-body text-sm uppercase tracking-[0.24em] text-ink/55">
-                    If It Is Not There
-                  </h3>
-                  <p className="mt-2 leading-7">{report.ifNotFound}</p>
-                </div>
-
-                <div className="rounded-[1.5rem] border border-pine/10 bg-pine/5 p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-body text-sm font-semibold uppercase tracking-[0.18em] text-pine">
-                        Found It?
-                      </p>
-                      <p className="mt-2 font-body text-sm leading-7 text-ink/70">
-                        This quick alpha feedback helps us improve the search coach.
-                      </p>
+                      <label className="block">
+                        <span className="font-body text-xs uppercase tracking-[0.2em] text-ink/55">
+                          Approximate time
+                        </span>
+                        <select
+                          value={details.selectedTimeMode ?? "not_sure"}
+                          onChange={(event) =>
+                            updateDetail(
+                              "selectedTimeMode",
+                              event.target.value as OptionalDetailInputs["selectedTimeMode"]
+                            )
+                          }
+                          className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                        >
+                          {timeOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        {details.selectedTimeMode === "approximate_hour" ? (
+                          <select
+                            value={details.selectedHour ?? ""}
+                            onChange={(event) => updateDetail("selectedHour", event.target.value)}
+                            className="mt-2 w-full rounded-2xl border border-sand bg-white px-4 py-3 font-body text-sm text-ink outline-none transition focus:border-ember focus:ring-2 focus:ring-ember/15"
+                          >
+                            <option value="">Choose an hour</option>
+                            {hourOptions.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
+                      </label>
                     </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleFeedback("found_it")}
-                        className={`rounded-full px-4 py-2 font-body text-sm font-semibold transition ${
-                          feedbackState === "found_it"
-                            ? "bg-pine text-white"
-                            : "border border-pine/15 bg-white text-pine hover:bg-pine/5"
-                        }`}
-                      >
-                        Yes, found it
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleFeedback("not_yet")}
-                        className={`rounded-full px-4 py-2 font-body text-sm font-semibold transition ${
-                          feedbackState === "not_yet"
-                            ? "bg-ember text-white"
-                            : "border border-ember/15 bg-white text-ember hover:bg-ember/5"
-                        }`}
-                      >
-                        Not yet
-                      </button>
-                    </div>
-                  </div>
-
-                  {feedbackState ? (
-                    <p className="mt-4 font-body text-sm leading-7 text-ink/70">
-                      {feedbackState === "found_it"
-                        ? "That is great to hear. Thanks for helping us learn what works."
-                        : "Thanks for the signal. We will use this to improve the next search pass."}
-                    </p>
                   ) : null}
                 </div>
-              </div>
-            ) : (
-              <div className="mt-6 rounded-[1.5rem] border border-dashed border-sand bg-[#fffaf3] p-6 font-body leading-7 text-ink/65">
-                Your report will appear here after you describe what happened. Start with the last
-                place you clearly remember using the item, then mention where you went after.
-              </div>
-            )}
-          </div>
 
-          <div className="rounded-[2rem] border border-white/70 bg-white/75 p-5 shadow-glow backdrop-blur sm:p-7 md:p-8">
-            <h2 className="font-display text-3xl text-pine">Clue Snapshot</h2>
-            <p className="mt-2 font-body text-sm leading-7 text-ink/65">
-              A lightweight view of the local clues behind the report.
-            </p>
+                <div className="flex flex-col items-center gap-4 pt-1">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="rounded-full bg-pine px-7 py-3 font-body text-sm font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-[#1f3a35] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    Build My Search Plan
+                  </button>
 
-            {analysis ? (
-              <div className="mt-6 space-y-5 font-body text-sm leading-7 text-ink/80">
-                <div>
-                  <p className="uppercase tracking-[0.24em] text-ink/50">Extracted</p>
-                  <p className="mt-2">
-                    <strong>Item:</strong> {analysis.input.itemType}
-                    <br />
-                    <strong>Category:</strong> {analysis.itemCategory}
-                    <br />
-                    <strong>Last seen:</strong> {analysis.input.lastSeenLocation}
-                    <br />
-                    <strong>Time:</strong> {analysis.input.lastSeenTime}
-                    <br />
-                    <strong>Gap:</strong> {analysis.memory.timeGapLabel}
-                    <br />
-                    <strong>Visited:</strong>{" "}
-                    {analysis.input.placesVisited.length > 0
-                      ? analysis.input.placesVisited.join(", ")
-                      : "No later stops detected"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="uppercase tracking-[0.24em] text-ink/50">Transition moments</p>
-                  <p className="mt-2">
-                    {analysis.memory.transitionMoments.length > 0
-                      ? analysis.memory.transitionMoments.join(", ")
-                      : "No major transition moments detected"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="uppercase tracking-[0.24em] text-ink/50">Top local signals</p>
-                  <ul className="mt-2 space-y-2">
-                    {analysis.probabilities.slice(0, 3).map((entry) => (
-                      <li key={entry.location} className="rounded-2xl bg-pine/5 px-4 py-3">
-                        <strong>{entry.location}</strong> ({entry.score}/100): {entry.reasons[0]}
-                      </li>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {examplePrompts.map((example) => (
+                      <button
+                        key={example.label}
+                        type="button"
+                        onClick={() => handleExampleClick(example.value, example.label)}
+                        className="rounded-full border border-pine/10 bg-pine/5 px-4 py-2 font-body text-sm text-pine transition hover:bg-pine/10"
+                      >
+                        {example.label}
+                      </button>
                     ))}
-                  </ul>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="mt-6 rounded-[1.5rem] bg-pine/5 p-6 font-body leading-7 text-ink/65">
-                This panel will show the extracted clues and the strongest local signals behind the
-                report.
-              </div>
-            )}
+              </form>
 
-            <div className="mt-6 rounded-[1.5rem] border border-pine/10 bg-white/70 p-5">
-              <p className="font-body text-xs uppercase tracking-[0.24em] text-ink/45">
-                Privacy note
-              </p>
-              <p className="mt-2 font-body text-sm leading-7 text-ink/70">
-                This public alpha is designed for quick, practical search help. Review our{" "}
-                <Link
-                  href="/privacy"
-                  className="text-pine underline decoration-pine/30 underline-offset-4"
-                  onClick={() => trackEvent("inline_link_clicked", { href: "/privacy" })}
-                >
-                  Privacy Policy
-                </Link>{" "}
-                and{" "}
-                <Link
-                  href="/terms"
-                  className="text-pine underline decoration-pine/30 underline-offset-4"
-                  onClick={() => trackEvent("inline_link_clicked", { href: "/terms" })}
-                >
-                  Terms
-                </Link>
-                .
-              </p>
-            </div>
-          </div>
+              {error ? (
+                <div className="mt-5 rounded-[1.5rem] border border-ember/20 bg-ember/10 px-5 py-4">
+                  <p className="font-body text-sm font-semibold uppercase tracking-[0.18em] text-ember">
+                    We hit a snag
+                  </p>
+                  <p className="mt-2 font-body text-sm leading-7 text-ember">
+                    {error} Try shortening the story to the last confirmed moment, then the next
+                    place you went.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="mt-6 text-center font-body text-sm leading-7 text-ink/58">
+                <p>No login, no payment, and no saved history in this public alpha version.</p>
+                <p className="mt-2">
+                  Review our{" "}
+                  <Link
+                    href="/privacy"
+                    className="text-pine underline decoration-pine/30 underline-offset-4"
+                    onClick={() => trackEvent("inline_link_clicked", { href: "/privacy" })}
+                  >
+                    Privacy Policy
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="/terms"
+                    className="text-pine underline decoration-pine/30 underline-offset-4"
+                    onClick={() => trackEvent("inline_link_clicked", { href: "/terms" })}
+                  >
+                    Terms
+                  </Link>
+                  .
+                </p>
+              </div>
+            </section>
+          )}
         </section>
       </div>
     </main>
