@@ -279,6 +279,7 @@ body::after {
   }
 
   .premium-select-trigger {
+    box-sizing: border-box;
     width: 100%;
     min-height: 58px;
     display: flex;
@@ -293,6 +294,9 @@ body::after {
     font-family: var(--font-body, sans-serif);
     font-size: 16px;
     color: #e9e2d2;
+    text-align: left;
+    appearance: none;
+    -webkit-appearance: none;
     outline: none;
     transition:
       border-color 180ms ease,

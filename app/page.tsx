@@ -652,7 +652,7 @@ export default function HomePage() {
 
                   <div className="field-grid mt-4">
                     <label className="block">
-                      <span className="eyebrow-text text-[11px] text-[#b69256]">Item</span>
+                      <span className="block eyebrow-text text-[11px] text-[#b69256]">Item</span>
                       <PremiumSelect
                         value={details.selectedItemType ?? ""}
                         onValueChange={(value) => {
@@ -677,7 +677,7 @@ export default function HomePage() {
                     </label>
 
                     <label className="block">
-                      <span className="eyebrow-text text-[11px] text-[#b69256]">Last known place</span>
+                      <span className="block eyebrow-text text-[11px] text-[#b69256]">Last known place</span>
                       <PremiumSelect
                         value={details.selectedPlace ?? ""}
                         onValueChange={(value) => {
@@ -702,7 +702,7 @@ export default function HomePage() {
                     </label>
 
                     <label className="block">
-                      <span className="eyebrow-text text-[11px] text-[#b69256]">Approximate time</span>
+                      <span className="block eyebrow-text text-[11px] text-[#b69256]">Approximate time</span>
                       <PremiumSelect
                         value={details.selectedTimeMode ?? ""}
                         onValueChange={(value) =>
@@ -731,7 +731,7 @@ export default function HomePage() {
                     </label>
 
                     <label className="block">
-                      <span className="eyebrow-text text-[11px] text-[#b69256]">Date (optional)</span>
+                      <span className="block eyebrow-text text-[11px] text-[#b69256]">Date (optional)</span>
                       <PremiumSelect
                         value={details.selectedDateMode ?? ""}
                         onValueChange={(value) =>
