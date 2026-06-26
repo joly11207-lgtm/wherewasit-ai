@@ -281,7 +281,7 @@ body::after {
   .premium-select-trigger {
     width: 100%;
     min-height: 58px;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
@@ -289,6 +289,7 @@ body::after {
     border: 1px solid rgba(201, 161, 92, 0.25);
     background: #0f0e0c;
     padding: 17px 20px;
+    margin-top: 8px;
     font-family: var(--font-body, sans-serif);
     font-size: 16px;
     color: #e9e2d2;
@@ -315,6 +316,7 @@ body::after {
   .premium-select-trigger-value {
     display: inline-flex;
     min-width: 0;
+    flex: 1 1 auto;
     align-items: center;
     gap: 12px;
   }
