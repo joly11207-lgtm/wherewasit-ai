@@ -114,7 +114,7 @@ const loadingSteps = [
 ];
 
 const fieldClassName =
-  "mt-2 w-full rounded-[16px] border border-[rgba(214,168,79,0.22)] bg-[rgba(0,0,0,0.48)] px-5 py-[17px] font-body text-base text-[#f5ead2] outline-none transition placeholder:text-[rgba(245,234,210,0.42)] focus:border-[rgba(214,168,79,0.72)] focus:bg-[rgba(0,0,0,0.62)] focus:ring-4 focus:ring-[rgba(214,168,79,0.08)]";
+  "mt-2 w-full rounded-[16px] border border-[rgba(214,168,79,0.24)] bg-[rgba(10,9,7,0.58)] px-5 py-[17px] font-body text-base text-[#fbf1dc] outline-none transition placeholder:text-[rgba(245,234,210,0.58)] focus:border-[rgba(214,168,79,0.78)] focus:bg-[rgba(8,7,5,0.72)] focus:ring-4 focus:ring-[rgba(214,168,79,0.1)]";
 
 function LoadingState() {
   const [activeStep, setActiveStep] = useState(0);
@@ -340,15 +340,15 @@ export default function HomePage() {
   }
 
   return (
-    <main className="reference-page relative overflow-hidden px-5 py-[42px] sm:px-6 md:px-10 md:py-16">
-      <div className="relative mx-auto flex min-h-[calc(100vh-10rem)] max-w-[980px] flex-col justify-center">
-        <section className="space-y-6">
+    <main className="reference-page relative overflow-hidden px-5 py-7 sm:px-6 md:px-10 md:py-10">
+      <div className="relative mx-auto flex min-h-[calc(100vh-8rem)] max-w-[980px] flex-col justify-center">
+        <section className="space-y-5">
           <div className="hero-stack mx-auto max-w-3xl text-center">
             <p className="eyebrow-text">WhereWasIt.ai</p>
-            <h1 className="hero-title mt-4 font-display">
+            <h1 className="hero-title mt-3 font-display">
               Lost something?
             </h1>
-            <p className="reference-subtitle mx-auto mt-[22px] max-w-xl text-center">
+            <p className="reference-subtitle mx-auto mt-4 max-w-xl text-center">
               {introCopy}
             </p>
           </div>
@@ -673,7 +673,7 @@ export default function HomePage() {
                         Tell us what happened
                       </span>
                       <textarea
-                        className="mt-2 min-h-[150px] w-full resize-y rounded-[16px] border border-[rgba(214,168,79,0.22)] bg-[rgba(0,0,0,0.48)] px-5 py-[17px] font-body text-base leading-[1.65] text-[#f5ead2] shadow-[0_0_0_1px_rgba(214,168,79,0.02),0_24px_70px_rgba(0,0,0,0.32)] outline-none transition placeholder:text-[rgba(245,234,210,0.42)] focus:border-[rgba(214,168,79,0.72)] focus:bg-[rgba(0,0,0,0.62)] focus:ring-4 focus:ring-[rgba(214,168,79,0.08)] disabled:cursor-not-allowed disabled:opacity-70"
+                        className="mt-2 min-h-[150px] w-full resize-y rounded-[16px] border border-[rgba(214,168,79,0.24)] bg-[rgba(10,9,7,0.58)] px-5 py-[17px] font-body text-base leading-[1.65] text-[#fbf1dc] shadow-[0_0_0_1px_rgba(214,168,79,0.03),0_24px_70px_rgba(0,0,0,0.32)] outline-none transition placeholder:text-[rgba(245,234,210,0.58)] focus:border-[rgba(214,168,79,0.78)] focus:bg-[rgba(8,7,5,0.72)] focus:ring-4 focus:ring-[rgba(214,168,79,0.1)] disabled:cursor-not-allowed disabled:opacity-70"
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
                         disabled={isLoading}
