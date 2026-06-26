@@ -2,39 +2,9 @@
 
 import Link from "next/link";
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
-import {
-  Backpack,
-  Bath,
-  BedDouble,
-  BookText,
-  BriefcaseBusiness,
-  CalendarClock,
-  CalendarDays,
-  CircleEllipsis,
-  CircleHelp,
-  Clock3,
-  CookingPot,
-  Gem,
-  Glasses,
-  Headphones,
-  Home,
-  Hotel,
-  KeyRound,
-  MapPin,
-  Moon,
-  School,
-  Smartphone,
-  Store,
-  Sun,
-  Sunrise,
-  Sunset,
-  Trees,
-  Wallet
-} from "lucide-react";
 
 import { trackEvent } from "@/lib/analytics";
 import { LocalAnalysis, OptionalDetailInputs, ReportSections } from "@/lib/types";
-import { PremiumSelect, PremiumSelectOption } from "@/components/PremiumSelect";
 
 type AnalyzeResponse = {
   analysis: LocalAnalysis;
@@ -64,49 +34,49 @@ const examplePrompts = [
 
 const OTHER_OPTION = "__other__";
 
-const itemSelectOptions: PremiumSelectOption[] = [
-  { value: "Keys", label: "Keys", icon: KeyRound },
-  { value: "Wallet", label: "Wallet", icon: Wallet },
-  { value: "Phone", label: "Phone", icon: Smartphone },
-  { value: "AirPods / Earbuds", label: "AirPods / Earbuds", icon: Headphones },
-  { value: "Ring / Jewelry", label: "Ring / Jewelry", icon: Gem },
-  { value: "Passport / Documents", label: "Passport / Documents", icon: BookText },
-  { value: "Glasses", label: "Glasses", icon: Glasses },
-  { value: "Bag / Backpack", label: "Bag / Backpack", icon: Backpack },
-  { value: OTHER_OPTION, label: "Other...", icon: CircleEllipsis }
+const itemTypeOptions = [
+  "Keys",
+  "Wallet",
+  "Phone",
+  "AirPods / Earbuds",
+  "Ring / Jewelry",
+  "Passport / Documents",
+  "Glasses",
+  "Bag / Backpack",
+  "Other..."
 ];
 
-const placeSelectOptions: PremiumSelectOption[] = [
-  { value: "Home", label: "Home", icon: Home },
-  { value: "Bedroom", label: "Bedroom", icon: BedDouble },
-  { value: "Bathroom", label: "Bathroom", icon: Bath },
-  { value: "Kitchen", label: "Kitchen", icon: CookingPot },
-  { value: "Car", label: "Car", icon: MapPin },
-  { value: "Work / Office", label: "Work / Office", icon: BriefcaseBusiness },
-  { value: "School", label: "School", icon: School },
-  { value: "Store", label: "Store", icon: Store },
-  { value: "Hotel / Travel", label: "Hotel / Travel", icon: Hotel },
-  { value: "Outside", label: "Outside", icon: Trees },
-  { value: "Not sure", label: "Not sure", icon: CircleHelp },
-  { value: OTHER_OPTION, label: "Other...", icon: CircleEllipsis }
+const placeOptions = [
+  "Home",
+  "Bedroom",
+  "Bathroom",
+  "Kitchen",
+  "Car",
+  "Work / Office",
+  "School",
+  "Store",
+  "Hotel / Travel",
+  "Outside",
+  "Not sure",
+  "Other..."
 ];
 
-const timeSelectOptions: PremiumSelectOption[] = [
-  { value: "early_morning", label: "Early morning (5-8)", icon: Sunrise },
-  { value: "morning", label: "Morning (8-12)", icon: Sun },
-  { value: "afternoon", label: "Afternoon (12-5)", icon: Sun },
-  { value: "evening", label: "Evening (5-9)", icon: Sunset },
-  { value: "night", label: "Night (9-12)", icon: Moon },
-  { value: "late_night", label: "Late night (12-5)", icon: Moon },
-  { value: "approximate_hour", label: "Approximate hour", icon: Clock3 },
-  { value: "not_sure", label: "Not sure", icon: CircleHelp }
+const dateOptions = [
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "pick_date", label: "Pick a date" },
+  { value: "not_sure", label: "Not sure" }
 ];
 
-const dateSelectOptions: PremiumSelectOption[] = [
-  { value: "today", label: "Today", icon: CalendarDays },
-  { value: "yesterday", label: "Yesterday", icon: CalendarDays },
-  { value: "pick_date", label: "Pick a date", icon: CalendarClock },
-  { value: "not_sure", label: "Not sure", icon: CircleHelp }
+const timeOptions = [
+  { value: "early_morning", label: "Early morning (5-8)" },
+  { value: "morning", label: "Morning (8-12)" },
+  { value: "afternoon", label: "Afternoon (12-5)" },
+  { value: "evening", label: "Evening (5-9)" },
+  { value: "night", label: "Night (9-12)" },
+  { value: "late_night", label: "Late night (12-5)" },
+  { value: "approximate_hour", label: "Approximate hour" },
+  { value: "not_sure", label: "Not sure" }
 ];
 
 const hourOptions = [
@@ -144,7 +114,7 @@ const loadingSteps = [
 ];
 
 const fieldClassName =
-  "mt-2 w-full rounded-[16px] border border-[rgba(214,168,79,0.24)] bg-[rgba(10,9,7,0.58)] px-5 py-[17px] font-body text-base text-[#fbf1dc] outline-none transition placeholder:text-[rgba(245,234,210,0.58)] focus:border-[rgba(214,168,79,0.78)] focus:bg-[rgba(8,7,5,0.72)] focus:ring-4 focus:ring-[rgba(214,168,79,0.1)]";
+  "mt-2 block h-14 w-full rounded-[16px] border border-[rgba(214,168,79,0.22)] bg-[rgba(0,0,0,0.48)] px-5 font-body text-base text-[#f5ead2] outline-none transition focus:border-[rgba(214,168,79,0.72)] focus:bg-[rgba(0,0,0,0.62)] focus:ring-4 focus:ring-[rgba(214,168,79,0.08)]";
 
 function formatDetailTime(details: OptionalDetailInputs): string | null {
   const timeLabels: Record<string, string> = {
@@ -653,18 +623,24 @@ export default function HomePage() {
                   <div className="field-grid mt-4">
                     <label className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Item</span>
-                      <PremiumSelect
+                      <select
                         value={details.selectedItemType ?? ""}
-                        onValueChange={(value) => {
-                          updateDetail("selectedItemType", value);
-                          if (value !== OTHER_OPTION) {
+                        onChange={(event) => {
+                          updateDetail("selectedItemType", event.target.value);
+                          if (event.target.value !== OTHER_OPTION) {
                             setCustomItemType("");
                           }
                         }}
-                        options={itemSelectOptions}
-                        placeholder="Select an item..."
-                        ariaLabel="Select an item"
-                      />
+                        aria-label="Select an item"
+                        className={fieldClassName}
+                      >
+                        <option value="">Select an item...</option>
+                        {itemTypeOptions.map((option) => (
+                          <option key={option} value={option === "Other..." ? OTHER_OPTION : option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
                       {details.selectedItemType === OTHER_OPTION ? (
                         <input
                           type="text"
@@ -678,18 +654,24 @@ export default function HomePage() {
 
                     <label className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Last known place</span>
-                      <PremiumSelect
+                      <select
                         value={details.selectedPlace ?? ""}
-                        onValueChange={(value) => {
-                          updateDetail("selectedPlace", value);
-                          if (value !== OTHER_OPTION) {
+                        onChange={(event) => {
+                          updateDetail("selectedPlace", event.target.value);
+                          if (event.target.value !== OTHER_OPTION) {
                             setCustomPlace("");
                           }
                         }}
-                        options={placeSelectOptions}
-                        placeholder="Select a place..."
-                        ariaLabel="Select a place"
-                      />
+                        aria-label="Select a place"
+                        className={fieldClassName}
+                      >
+                        <option value="">Select a place...</option>
+                        {placeOptions.map((option) => (
+                          <option key={option} value={option === "Other..." ? OTHER_OPTION : option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
                       {details.selectedPlace === OTHER_OPTION ? (
                         <input
                           type="text"
@@ -703,47 +685,61 @@ export default function HomePage() {
 
                     <label className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Approximate time</span>
-                      <PremiumSelect
+                      <select
                         value={details.selectedTimeMode ?? ""}
-                        onValueChange={(value) =>
+                        onChange={(event) =>
                           updateDetail(
                             "selectedTimeMode",
-                            value as OptionalDetailInputs["selectedTimeMode"]
+                            event.target.value as OptionalDetailInputs["selectedTimeMode"]
                           )
                         }
-                        options={timeSelectOptions}
-                        placeholder="Select a time..."
-                        ariaLabel="Select a time"
-                      />
+                        aria-label="Select a time"
+                        className={fieldClassName}
+                      >
+                        <option value="">Select a time...</option>
+                        {timeOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                       {details.selectedTimeMode === "approximate_hour" ? (
-                        <PremiumSelect
+                        <select
                           value={details.selectedHour ?? ""}
-                          onValueChange={(value) => updateDetail("selectedHour", value)}
-                          options={hourOptions.map((option) => ({
-                            value: option,
-                            label: option,
-                            icon: Clock3
-                          }))}
-                          placeholder="Choose an hour..."
-                          ariaLabel="Choose an hour"
-                        />
+                          onChange={(event) => updateDetail("selectedHour", event.target.value)}
+                          aria-label="Choose an hour"
+                          className={fieldClassName}
+                        >
+                          <option value="">Choose an hour...</option>
+                          {hourOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
                       ) : null}
                     </label>
 
                     <label className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Date (optional)</span>
-                      <PremiumSelect
+                      <select
                         value={details.selectedDateMode ?? ""}
-                        onValueChange={(value) =>
+                        onChange={(event) =>
                           updateDetail(
                             "selectedDateMode",
-                            value as OptionalDetailInputs["selectedDateMode"]
+                            event.target.value as OptionalDetailInputs["selectedDateMode"]
                           )
                         }
-                        options={dateSelectOptions}
-                        placeholder="Select a date..."
-                        ariaLabel="Select a date"
-                      />
+                        aria-label="Select a date"
+                        className={fieldClassName}
+                      >
+                        <option value="">Select a date...</option>
+                        {dateOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                       {details.selectedDateMode === "pick_date" ? (
                         <input
                           type="date"
