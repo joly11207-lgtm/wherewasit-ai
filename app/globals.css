@@ -278,6 +278,115 @@ body::after {
     background: rgba(214, 168, 79, 0.08);
   }
 
+  .simple-select {
+    position: relative;
+    margin-top: 8px;
+  }
+
+  .simple-select-trigger {
+    display: flex;
+    height: 56px;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(214, 168, 79, 0.22);
+    background: rgba(0, 0, 0, 0.48);
+    padding: 0 20px;
+    font-family: var(--font-body, sans-serif);
+    font-size: 16px;
+    color: #f5ead2;
+    text-align: left;
+    outline: none;
+    transition:
+      border-color 180ms ease,
+      background 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .simple-select-trigger:hover,
+  .simple-select-trigger:focus-visible,
+  .simple-select-trigger[data-open="true"] {
+    border-color: rgba(214, 168, 79, 0.42);
+    background: rgba(8, 7, 5, 0.62);
+    box-shadow: 0 0 0 4px rgba(214, 168, 79, 0.08);
+  }
+
+  .simple-select-placeholder {
+    color: rgba(233, 226, 210, 0.45);
+  }
+
+  .simple-select-value {
+    color: #e9e2d2;
+  }
+
+  .simple-select-placeholder,
+  .simple-select-value {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .simple-select-chevron,
+  .simple-select-check {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: #c9a15c;
+  }
+
+  .simple-select-chevron-open {
+    transform: rotate(180deg);
+  }
+
+  .simple-select-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    overflow: hidden;
+    border-radius: 16px;
+    border: 1px solid rgba(214, 168, 79, 0.22);
+    background: #141311;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+    padding: 6px;
+  }
+
+  .simple-select-option {
+    display: flex;
+    height: 44px;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    padding: 0 14px;
+    font-family: var(--font-body, sans-serif);
+    font-size: 15px;
+    color: #e9e2d2;
+    text-align: left;
+    outline: none;
+    transition:
+      background 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .simple-select-option:hover,
+  .simple-select-option:focus-visible {
+    background: rgba(214, 168, 79, 0.1);
+  }
+
+  .simple-select-option-selected {
+    border-color: rgba(214, 168, 79, 0.2);
+    color: #f1ddb7;
+  }
+
   .story-collapsed-card {
     border: 1px solid rgba(214, 168, 79, 0.18);
     border-radius: 18px;

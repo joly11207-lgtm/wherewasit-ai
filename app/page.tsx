@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
+import { SimpleSelect, SimpleSelectOption } from "@/components/SimpleSelect";
 import { trackEvent } from "@/lib/analytics";
 import { LocalAnalysis, OptionalDetailInputs, ReportSections } from "@/lib/types";
 
@@ -46,6 +47,11 @@ const itemTypeOptions = [
   "Other..."
 ];
 
+const itemSelectOptions: SimpleSelectOption[] = itemTypeOptions.map((option) => ({
+  value: option === "Other..." ? OTHER_OPTION : option,
+  label: option
+}));
+
 const placeOptions = [
   "Home",
   "Bedroom",
@@ -61,12 +67,22 @@ const placeOptions = [
   "Other..."
 ];
 
+const placeSelectOptions: SimpleSelectOption[] = placeOptions.map((option) => ({
+  value: option === "Other..." ? OTHER_OPTION : option,
+  label: option
+}));
+
 const dateOptions = [
   { value: "today", label: "Today" },
   { value: "yesterday", label: "Yesterday" },
   { value: "pick_date", label: "Pick a date" },
   { value: "not_sure", label: "Not sure" }
 ];
+
+const dateSelectOptions: SimpleSelectOption[] = dateOptions.map((option) => ({
+  value: option.value,
+  label: option.label
+}));
 
 const timeOptions = [
   { value: "early_morning", label: "Early morning (5-8)" },
@@ -78,6 +94,11 @@ const timeOptions = [
   { value: "approximate_hour", label: "Approximate hour" },
   { value: "not_sure", label: "Not sure" }
 ];
+
+const timeSelectOptions: SimpleSelectOption[] = timeOptions.map((option) => ({
+  value: option.value,
+  label: option.label
+}));
 
 const hourOptions = [
   "1 AM",
@@ -623,24 +644,18 @@ export default function HomePage() {
                   <div className="field-grid mt-4">
                     <label className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Item</span>
-                      <select
+                      <SimpleSelect
                         value={details.selectedItemType ?? ""}
-                        onChange={(event) => {
-                          updateDetail("selectedItemType", event.target.value);
-                          if (event.target.value !== OTHER_OPTION) {
+                        onValueChange={(value) => {
+                          updateDetail("selectedItemType", value);
+                          if (value !== OTHER_OPTION) {
                             setCustomItemType("");
                           }
                         }}
-                        aria-label="Select an item"
-                        className={fieldClassName}
-                      >
-                        <option value="">Select an item...</option>
-                        {itemTypeOptions.map((option) => (
-                          <option key={option} value={option === "Other..." ? OTHER_OPTION : option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                        options={itemSelectOptions}
+                        placeholder="Select an item..."
+                        ariaLabel="Select an item"
+                      />
                       {details.selectedItemType === OTHER_OPTION ? (
                         <input
                           type="text"
@@ -654,24 +669,18 @@ export default function HomePage() {
 
                     <label className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Last known place</span>
-                      <select
+                      <SimpleSelect
                         value={details.selectedPlace ?? ""}
-                        onChange={(event) => {
-                          updateDetail("selectedPlace", event.target.value);
-                          if (event.target.value !== OTHER_OPTION) {
+                        onValueChange={(value) => {
+                          updateDetail("selectedPlace", value);
+                          if (value !== OTHER_OPTION) {
                             setCustomPlace("");
                           }
                         }}
-                        aria-label="Select a place"
-                        className={fieldClassName}
-                      >
-                        <option value="">Select a place...</option>
-                        {placeOptions.map((option) => (
-                          <option key={option} value={option === "Other..." ? OTHER_OPTION : option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                        options={placeSelectOptions}
+                        placeholder="Select a place..."
+                        ariaLabel="Select a place"
+                      />
                       {details.selectedPlace === OTHER_OPTION ? (
                         <input
                           type="text"
@@ -685,24 +694,18 @@ export default function HomePage() {
 
                     <label className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Approximate time</span>
-                      <select
+                      <SimpleSelect
                         value={details.selectedTimeMode ?? ""}
-                        onChange={(event) =>
+                        onValueChange={(value) =>
                           updateDetail(
                             "selectedTimeMode",
-                            event.target.value as OptionalDetailInputs["selectedTimeMode"]
+                            value as OptionalDetailInputs["selectedTimeMode"]
                           )
                         }
-                        aria-label="Select a time"
-                        className={fieldClassName}
-                      >
-                        <option value="">Select a time...</option>
-                        {timeOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                        options={timeSelectOptions}
+                        placeholder="Select a time..."
+                        ariaLabel="Select a time"
+                      />
                       {details.selectedTimeMode === "approximate_hour" ? (
                         <select
                           value={details.selectedHour ?? ""}
@@ -722,24 +725,18 @@ export default function HomePage() {
 
                     <label className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Date (optional)</span>
-                      <select
+                      <SimpleSelect
                         value={details.selectedDateMode ?? ""}
-                        onChange={(event) =>
+                        onValueChange={(value) =>
                           updateDetail(
                             "selectedDateMode",
-                            event.target.value as OptionalDetailInputs["selectedDateMode"]
+                            value as OptionalDetailInputs["selectedDateMode"]
                           )
                         }
-                        aria-label="Select a date"
-                        className={fieldClassName}
-                      >
-                        <option value="">Select a date...</option>
-                        {dateOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                        options={dateSelectOptions}
+                        placeholder="Select a date..."
+                        ariaLabel="Select a date"
+                      />
                       {details.selectedDateMode === "pick_date" ? (
                         <input
                           type="date"
