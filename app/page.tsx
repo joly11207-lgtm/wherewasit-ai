@@ -114,7 +114,7 @@ const loadingSteps = [
 ];
 
 const fieldClassName =
-  "mt-2 w-full rounded-[1.15rem] border border-[rgba(212,175,110,0.22)] bg-[rgba(0,0,0,0.45)] px-4 py-3 font-body text-sm text-[#efe4c8] outline-none transition placeholder:text-[#8a826e] focus:border-[#d4af6e] focus:ring-2 focus:ring-[rgba(212,175,110,0.18)]";
+  "mt-2 w-full rounded-[16px] border border-[rgba(214,168,79,0.22)] bg-[rgba(0,0,0,0.48)] px-5 py-[17px] font-body text-base text-[#f5ead2] outline-none transition placeholder:text-[rgba(245,234,210,0.42)] focus:border-[rgba(214,168,79,0.72)] focus:bg-[rgba(0,0,0,0.62)] focus:ring-4 focus:ring-[rgba(214,168,79,0.08)]";
 
 function LoadingState() {
   const [activeStep, setActiveStep] = useState(0);
@@ -128,48 +128,50 @@ function LoadingState() {
   }, []);
 
   return (
-    <div className="mystery-card mx-auto w-full max-w-3xl p-6 sm:p-8">
-      <div className="mx-auto max-w-2xl text-center">
-        <p className="eyebrow-text">Tracing Clues</p>
-        <h2 className="mt-4 font-display text-3xl text-[#f2e5c8] sm:text-4xl">
-          Building your search plan
-        </h2>
-        <p className="mt-3 font-body text-sm leading-7 text-[#c1b69d] sm:text-base">
-          We are retracing your route, weighing habit patterns, and narrowing overlooked places.
-        </p>
-      </div>
+    <div className="mystery-card mx-auto w-full max-w-[980px] p-[18px] sm:p-[34px]">
+      <div className="panel-inner">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="eyebrow-text">Tracing Clues</p>
+          <h2 className="mt-4 font-display text-3xl text-[#f5ead2] sm:text-4xl">
+            Building your search plan
+          </h2>
+          <p className="reference-subtitle mt-4 text-base sm:text-lg">
+            We are retracing your route, weighing habit patterns, and narrowing overlooked places.
+          </p>
+        </div>
 
-      <div className="mx-auto mt-8 max-w-2xl space-y-3">
-        {loadingSteps.map((step, index) => {
-          const isComplete = index < activeStep;
-          const isActive = index === activeStep;
+        <div className="mx-auto mt-8 max-w-2xl space-y-3">
+          {loadingSteps.map((step, index) => {
+            const isComplete = index < activeStep;
+            const isActive = index === activeStep;
 
-          return (
-            <div
-              key={step}
-              className={`flex items-center gap-3 rounded-[1.35rem] border px-4 py-4 transition ${
-                isActive
-                  ? "border-[rgba(212,175,110,0.32)] bg-[rgba(212,175,110,0.12)] text-[#f8edd8]"
-                  : isComplete
-                    ? "border-[rgba(212,175,110,0.18)] bg-[rgba(212,175,110,0.07)] text-[#e7d3a9]"
-                    : "border-[rgba(212,175,110,0.12)] bg-[rgba(255,255,255,0.02)] text-[#90866d]"
-              }`}
-            >
+            return (
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full border text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                key={step}
+                className={`flex items-center gap-3 rounded-[16px] border px-4 py-4 transition ${
                   isActive
-                    ? "border-[rgba(255,240,212,0.35)] bg-[rgba(255,240,212,0.08)]"
+                    ? "border-[rgba(214,168,79,0.32)] bg-[rgba(214,168,79,0.12)] text-[#f8edd8]"
                     : isComplete
-                      ? "border-[rgba(212,175,110,0.26)] bg-[rgba(212,175,110,0.1)]"
-                      : "border-[rgba(212,175,110,0.14)] bg-[rgba(255,255,255,0.02)]"
+                      ? "border-[rgba(214,168,79,0.18)] bg-[rgba(214,168,79,0.07)] text-[#e7d3a9]"
+                      : "border-[rgba(214,168,79,0.12)] bg-[rgba(255,255,255,0.02)] text-[#90866d]"
                 }`}
               >
-                {isComplete ? "Done" : isActive ? "Now" : `${index + 1}`}
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full border text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                    isActive
+                      ? "border-[rgba(255,240,212,0.35)] bg-[rgba(255,240,212,0.08)]"
+                      : isComplete
+                        ? "border-[rgba(214,168,79,0.26)] bg-[rgba(214,168,79,0.1)]"
+                        : "border-[rgba(214,168,79,0.14)] bg-[rgba(255,255,255,0.02)]"
+                  }`}
+                >
+                  {isComplete ? "Done" : isActive ? "Now" : `${index + 1}`}
+                </div>
+                <p className="font-body text-sm sm:text-base">{step}</p>
               </div>
-              <p className="font-body text-sm sm:text-base">{step}</p>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -178,21 +180,11 @@ function LoadingState() {
 function ResultCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mystery-card p-6 sm:p-7">
-      <h3 className="eyebrow-text text-[11px] text-[#d4af6e]">{title}</h3>
-      <div className="mt-4 font-body text-[#efe4c8]">{children}</div>
+      <div className="panel-inner-soft">
+        <h3 className="eyebrow-text text-[11px] text-[#d4af6e]">{title}</h3>
+        <div className="mt-4 font-body text-[#efe4c8]">{children}</div>
+      </div>
     </section>
-  );
-}
-
-function BackgroundOrnaments() {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(212,175,110,0.08),transparent_22%),radial-gradient(circle_at_20%_80%,rgba(212,175,110,0.04),transparent_18%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.03),transparent_20%)]" />
-      <div className="starfield absolute inset-0 opacity-80" />
-      <div className="map-lines absolute inset-0 opacity-30" />
-      <div className="compass-orbit absolute left-1/2 top-[7%] h-[32rem] w-[32rem] -translate-x-1/2 rounded-full opacity-40" />
-      <div className="compass-orbit absolute bottom-[-10rem] right-[-8rem] h-[26rem] w-[26rem] rounded-full opacity-20" />
-    </div>
   );
 }
 
@@ -348,17 +340,15 @@ export default function HomePage() {
   }
 
   return (
-    <main className="relative overflow-hidden px-4 py-6 sm:px-6 md:px-10 md:py-10">
-      <BackgroundOrnaments />
-
-      <div className="relative mx-auto flex min-h-[calc(100vh-10rem)] max-w-4xl flex-col justify-center">
+    <main className="reference-page relative overflow-hidden px-5 py-[42px] sm:px-6 md:px-10 md:py-16">
+      <div className="relative mx-auto flex min-h-[calc(100vh-10rem)] max-w-[980px] flex-col justify-center">
         <section className="space-y-6">
-          <div className="hero-stack mx-auto max-w-2xl text-center">
+          <div className="hero-stack mx-auto max-w-3xl text-center">
             <p className="eyebrow-text">WhereWasIt.ai</p>
-            <h1 className="hero-title mt-4 font-display text-4xl leading-tight sm:text-5xl md:text-6xl">
+            <h1 className="hero-title mt-4 font-display">
               Lost something?
             </h1>
-            <p className="mx-auto mt-4 max-w-xl font-body text-base leading-8 text-[#c3b797] sm:text-lg">
+            <p className="reference-subtitle mx-auto mt-[22px] max-w-xl text-center">
               {introCopy}
             </p>
           </div>
@@ -366,32 +356,34 @@ export default function HomePage() {
           {isLoading ? (
             <LoadingState />
           ) : hasResult && report ? (
-            <div className="mx-auto w-full max-w-3xl space-y-4 sm:space-y-5">
+            <div className="mx-auto w-full max-w-[980px] space-y-4 sm:space-y-5">
               <section className="mystery-card p-6 sm:p-8">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="eyebrow-text text-[11px] text-[#b69256]">Search Plan Ready</p>
-                    <h2 className="mt-3 font-display text-3xl text-[#f2e5c8] sm:text-4xl">
-                      Most Likely Area
-                    </h2>
-                    <p className="mt-3 font-display text-2xl leading-tight text-[#d4af6e] sm:text-3xl">
-                      {report.mostLikelyArea}
-                    </p>
-                  </div>
+                <div className="panel-inner-soft">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="eyebrow-text text-[11px] text-[#b69256]">Search Plan Ready</p>
+                      <h2 className="mt-3 font-display text-3xl text-[#f5ead2] sm:text-4xl">
+                        Most Likely Area
+                      </h2>
+                      <p className="mt-3 font-display text-2xl leading-tight text-[#d6a84f] sm:text-3xl">
+                        {report.mostLikelyArea}
+                      </p>
+                    </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {usedFallback ? (
-                      <span className="rounded-full border border-[rgba(212,175,110,0.18)] bg-[rgba(212,175,110,0.08)] px-3 py-2 font-body text-xs uppercase tracking-[0.2em] text-[#d4af6e]">
-                        Template fallback
-                      </span>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={handleReset}
-                      className="rounded-full border border-[rgba(212,175,110,0.18)] bg-[rgba(255,255,255,0.02)] px-4 py-2 font-body text-sm font-semibold text-[#efe4c8] transition hover:border-[rgba(212,175,110,0.34)] hover:bg-[rgba(212,175,110,0.08)]"
-                    >
-                      New Search
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      {usedFallback ? (
+                        <span className="rounded-full border border-[rgba(214,168,79,0.18)] bg-[rgba(214,168,79,0.08)] px-3 py-2 font-body text-xs uppercase tracking-[0.2em] text-[#d6a84f]">
+                          Template fallback
+                        </span>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={handleReset}
+                        className="rounded-full border border-[rgba(214,168,79,0.18)] bg-[rgba(0,0,0,0.42)] px-4 py-2 font-body text-sm font-semibold text-[#efe4c8] transition hover:border-[rgba(214,168,79,0.34)] hover:bg-[rgba(214,168,79,0.08)]"
+                      >
+                        New Search
+                      </button>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -438,47 +430,49 @@ export default function HomePage() {
               </ResultCard>
 
               <section className="mystery-card p-6 sm:p-7">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="eyebrow-text text-[11px] text-[#d4af6e]">Found It?</p>
-                    <p className="mt-2 font-body text-sm leading-7 text-[#c1b69d]">
-                      Your feedback helps us improve the public alpha search coach.
+                <div className="panel-inner-soft">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="eyebrow-text text-[11px] text-[#d4af6e]">Found It?</p>
+                      <p className="mt-2 font-body text-sm leading-7 text-[#c1b69d]">
+                        Your feedback helps us improve the public alpha search coach.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleFeedback("found_it")}
+                        className={`rounded-full px-4 py-2 font-body text-sm font-semibold transition ${
+                          feedbackState === "found_it"
+                            ? "border border-[rgba(214,168,79,0.26)] bg-[linear-gradient(135deg,rgba(181,136,55,0.55),rgba(111,82,30,0.75))] text-[#fff6e5]"
+                            : "border border-[rgba(214,168,79,0.18)] bg-[rgba(0,0,0,0.42)] text-[#efe4c8] hover:bg-[rgba(214,168,79,0.08)]"
+                        }`}
+                      >
+                        Yes, found it
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFeedback("not_yet")}
+                        className={`rounded-full px-4 py-2 font-body text-sm font-semibold transition ${
+                          feedbackState === "not_yet"
+                            ? "border border-[rgba(214,168,79,0.18)] bg-[rgba(132,83,42,0.55)] text-[#fff2dc]"
+                            : "border border-[rgba(214,168,79,0.18)] bg-[rgba(0,0,0,0.42)] text-[#d8bf93] hover:bg-[rgba(214,168,79,0.08)]"
+                        }`}
+                      >
+                        Not yet
+                      </button>
+                    </div>
+                  </div>
+
+                  {feedbackState ? (
+                    <p className="mt-4 font-body text-sm leading-7 text-[#c1b69d]">
+                      {feedbackState === "found_it"
+                        ? "That is great to hear. Thanks for helping us learn what works."
+                        : "Thanks for the signal. We will use it to improve the next search pass."}
                     </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleFeedback("found_it")}
-                      className={`rounded-full px-4 py-2 font-body text-sm font-semibold transition ${
-                        feedbackState === "found_it"
-                          ? "border border-[rgba(212,175,110,0.26)] bg-[linear-gradient(135deg,rgba(181,136,55,0.55),rgba(111,82,30,0.75))] text-[#fff6e5]"
-                          : "border border-[rgba(212,175,110,0.18)] bg-[rgba(255,255,255,0.02)] text-[#efe4c8] hover:bg-[rgba(212,175,110,0.08)]"
-                      }`}
-                    >
-                      Yes, found it
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleFeedback("not_yet")}
-                      className={`rounded-full px-4 py-2 font-body text-sm font-semibold transition ${
-                        feedbackState === "not_yet"
-                          ? "border border-[rgba(212,175,110,0.18)] bg-[rgba(132,83,42,0.55)] text-[#fff2dc]"
-                          : "border border-[rgba(212,175,110,0.18)] bg-[rgba(255,255,255,0.02)] text-[#d8bf93] hover:bg-[rgba(212,175,110,0.08)]"
-                      }`}
-                    >
-                      Not yet
-                    </button>
-                  </div>
+                  ) : null}
                 </div>
-
-                {feedbackState ? (
-                  <p className="mt-4 font-body text-sm leading-7 text-[#c1b69d]">
-                    {feedbackState === "found_it"
-                      ? "That is great to hear. Thanks for helping us learn what works."
-                      : "Thanks for the signal. We will use it to improve the next search pass."}
-                  </p>
-                ) : null}
               </section>
 
               <details
@@ -495,7 +489,7 @@ export default function HomePage() {
                 </summary>
 
                 {analysis ? (
-                  <div className="mt-5 space-y-5 font-body text-sm leading-7 text-[#c7bb9f]">
+                  <div className="panel-inner-soft mt-5 space-y-5 font-body text-sm leading-7 text-[#c7bb9f]">
                     <div>
                       <p className="uppercase tracking-[0.24em] text-[#a98b56]">Extracted</p>
                       <p className="mt-2">
@@ -541,17 +535,15 @@ export default function HomePage() {
               </details>
             </div>
           ) : (
-            <section className="mystery-card mystery-card--floating mx-auto w-full max-w-3xl p-5 sm:p-7 md:p-8">
+            <section className="mystery-card mystery-card--floating mx-auto w-full max-w-[980px] p-[18px] sm:p-[34px]">
               <form className="space-y-5" onSubmit={handleSubmit}>
-                <div className="rounded-[1.6rem] border border-[rgba(212,175,110,0.12)] bg-[rgba(255,255,255,0.025)] p-4 sm:p-5">
-                  <p className="font-body text-sm leading-7 text-[#c3b797]">
+                <div className="panel-inner">
+                  <p className="form-hint">
                     These details are optional, but they can help us narrow the search.
                   </p>
-                  <p className="mt-1 font-body text-sm leading-7 text-[#9f9379]">
-                    Your story is still the most important clue.
-                  </p>
+                  <p className="form-hint form-hint-strong">Your story is still the most important clue.</p>
 
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div className="field-grid mt-4">
                     <label className="block">
                       <span className="eyebrow-text text-[11px] text-[#b69256]">Item</span>
                       <select
@@ -674,34 +666,38 @@ export default function HomePage() {
                       ) : null}
                     </label>
                   </div>
-                </div>
 
-                <textarea
-                  className="min-h-56 w-full rounded-[1.7rem] border border-[rgba(212,175,110,0.22)] bg-[rgba(0,0,0,0.45)] px-5 py-5 font-body text-base leading-8 text-[#efe4c8] shadow-[0_0_0_1px_rgba(212,175,110,0.02),0_24px_70px_rgba(0,0,0,0.32)] outline-none transition placeholder:text-[#7f7766] focus:border-[#d4af6e] focus:ring-2 focus:ring-[rgba(212,175,110,0.18)] disabled:cursor-not-allowed disabled:opacity-70 sm:min-h-64 sm:text-lg"
-                  value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  disabled={isLoading}
-                  placeholder="I lost my AirPods. I last used them in my bedroom this morning, then drove to work."
-                />
+                  <div className="story-block mt-2">
+                    <label className="block">
+                      <span className="eyebrow-text text-[11px] text-[#b69256]">
+                        Tell us what happened
+                      </span>
+                      <textarea
+                        className="mt-2 min-h-[150px] w-full resize-y rounded-[16px] border border-[rgba(214,168,79,0.22)] bg-[rgba(0,0,0,0.48)] px-5 py-[17px] font-body text-base leading-[1.65] text-[#f5ead2] shadow-[0_0_0_1px_rgba(214,168,79,0.02),0_24px_70px_rgba(0,0,0,0.32)] outline-none transition placeholder:text-[rgba(245,234,210,0.42)] focus:border-[rgba(214,168,79,0.72)] focus:bg-[rgba(0,0,0,0.62)] focus:ring-4 focus:ring-[rgba(214,168,79,0.08)] disabled:cursor-not-allowed disabled:opacity-70"
+                        value={input}
+                        onChange={(event) => setInput(event.target.value)}
+                        disabled={isLoading}
+                        placeholder={`Where did you last remember using it?\nWhat happened next?\nAnything unusual you remember?`}
+                      />
+                    </label>
+                  </div>
 
-                <div className="flex flex-col items-center gap-4 pt-1">
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="gold-button rounded-full px-8 py-3 font-body text-sm font-semibold uppercase tracking-[0.26em] text-[#fff5e6] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="gold-button mt-[30px] block w-full max-w-[420px] rounded-[16px] px-7 py-[18px] font-body text-[15px] font-bold uppercase tracking-[0.22em] text-[#1a1206] disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     Find My Item
                   </button>
 
-                  <div className="flex flex-wrap items-center justify-center gap-2">
+                  <div className="examples-row mt-[10px]">
                     {examplePrompts.map((example) => (
                       <button
                         key={example.label}
                         type="button"
                         onClick={() => handleExampleClick(example.value, example.label)}
-                        className="inline-flex items-center gap-2 rounded-full border border-[rgba(212,175,110,0.18)] bg-[rgba(255,255,255,0.025)] px-4 py-2 font-body text-sm text-[#d8c39a] transition hover:border-[rgba(212,175,110,0.3)] hover:bg-[rgba(212,175,110,0.08)]"
+                        className="reference-chip"
                       >
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#d4af6e]" />
                         {example.label}
                       </button>
                     ))}

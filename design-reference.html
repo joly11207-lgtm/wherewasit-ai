@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhereWasIt.ai</title>
+  <style>
+    :root {
+      --bg: #030303;
+      --card: rgba(12, 10, 7, 0.76);
+      --card-soft: rgba(255, 255, 255, 0.035);
+      --gold: #d6a84f;
+      --gold-soft: rgba(214, 168, 79, 0.35);
+      --gold-faint: rgba(214, 168, 79, 0.14);
+      --cream: #f5ead2;
+      --muted: #9b927f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--cream);
+      background:
+        radial-gradient(circle at 50% 0%, rgba(214, 168, 79, 0.18), transparent 32%),
+        radial-gradient(circle at 18% 40%, rgba(214, 168, 79, 0.08), transparent 25%),
+        radial-gradient(circle at 84% 42%, rgba(214, 168, 79, 0.07), transparent 26%),
+        #030303;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle, rgba(255, 226, 157, 0.9) 0 1px, transparent 1.5px),
+        radial-gradient(circle, rgba(255, 226, 157, 0.45) 0 1px, transparent 1.5px);
+      background-size: 280px 280px, 420px 420px;
+      background-position: 30px 70px, 160px 120px;
+      opacity: 0.28;
+      animation: twinkle 12s ease-in-out infinite alternate;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, transparent 0%, rgba(214,168,79,.04) 50%, transparent 100%),
+        url("data:image/svg+xml,%3Csvg width='900' height='700' viewBox='0 0 900 700' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23d6a84f' stroke-opacity='.11'%3E%3Ccircle cx='110' cy='340' r='105'/%3E%3Ccircle cx='110' cy='340' r='70'/%3E%3Cpath d='M110 210v260M-20 340h260M110 210l34 130-34 130-34-130z'/%3E%3Cpath d='M720 110c60 80 80 190 32 310M610 190c110-40 210 4 260 100M620 520c80-50 190-70 270-20'/%3E%3Cpath d='M620 260l120-80 85 120-140 70z'/%3E%3Cpath d='M690 270l120 20M725 210l30 130'/%3E%3C/g%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: cover;
+      opacity: 0.5;
+      animation: slowDrift 36s ease-in-out infinite alternate;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      padding: 42px 20px 64px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .brand {
+      color: var(--gold);
+      letter-spacing: 0.45em;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(58px, 7vw, 104px);
+      line-height: 0.9;
+      font-weight: 500;
+      text-align: center;
+      letter-spacing: -0.04em;
+      background: linear-gradient(90deg, #fff3d3 0%, #d6a84f 55%, #f8d783 100%);
+      -webkit-background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 42px rgba(214,168,79,0.14);
+    }
+
+    .subtitle {
+      margin: 22px 0 36px;
+      color: #c8bda6;
+      font-size: 20px;
+      text-align: center;
+    }
+
+    .panel {
+      width: min(980px, 100%);
+      padding: 34px;
+      border-radius: 30px;
+      background: var(--card);
+      border: 1px solid var(--gold-faint);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.02) inset,
+        0 24px 80px rgba(0,0,0,0.65),
+        0 0 120px rgba(214,168,79,0.08);
+      backdrop-filter: blur(22px);
+      animation: floatCard 10s ease-in-out infinite;
+    }
+
+    .inner {
+      padding: 28px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(214,168,79,0.11);
+    }
+
+    .hint {
+      margin-bottom: 30px;
+      color: #d8ccb4;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    .hint strong {
+      color: var(--gold);
+      font-weight: 500;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px 34px;
+      margin-bottom: 26px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      color: var(--gold);
+      font-size: 12px;
+      letter-spacing: 0.34em;
+      text-transform: uppercase;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid rgba(214,168,79,0.22);
+      border-radius: 16px;
+      background: rgba(0,0,0,0.48);
+      color: var(--cream);
+      padding: 17px 20px;
+      font-size: 16px;
+      outline: none;
+      transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    select:focus,
+    input:focus,
+    textarea:focus {
+      border-color: rgba(214,168,79,0.72);
+      box-shadow: 0 0 0 4px rgba(214,168,79,0.08);
+      background: rgba(0,0,0,0.62);
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: rgba(245,234,210,0.42);
+    }
+
+    .story {
+      margin-top: 8px;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+      line-height: 1.65;
+    }
+
+    .cta {
+      position: relative;
+      display: block;
+      width: min(420px, 100%);
+      margin: 30px auto 18px;
+      padding: 18px 28px;
+      border: 0;
+      border-radius: 16px;
+      color: #1a1206;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      font-size: 15px;
+      background: linear-gradient(90deg, #9d6c26, #f1c56c, #9d6c26);
+      box-shadow: 0 0 32px rgba(214,168,79,0.22);
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .cta::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -80%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+      transform: skewX(-18deg);
+    }
+
+    .cta:hover::after {
+      animation: shine 0.9s ease;
+    }
+
+    .examples {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .chip {
+      border: 1px solid rgba(214,168,79,0.18);
+      background: rgba(0,0,0,0.42);
+      color: #e8dcc4;
+      border-radius: 999px;
+      padding: 11px 24px;
+      font-size: 15px;
+    }
+
+    @keyframes shine {
+      from { left: -80%; }
+      to { left: 130%; }
+    }
+
+    @keyframes twinkle {
+      from { opacity: 0.18; }
+      to { opacity: 0.36; }
+    }
+
+    @keyframes slowDrift {
+      from { transform: translate3d(0,0,0) scale(1); }
+      to { transform: translate3d(8px,-6px,0) scale(1.01); }
+    }
+
+    @keyframes floatCard {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        padding-top: 32px;
+      }
+
+      h1 {
+        font-size: 56px;
+      }
+
+      .panel {
+        padding: 18px;
+        border-radius: 24px;
+      }
+
+      .inner {
+        padding: 20px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="brand">WHEREWASIT.AI</div>
+    <h1>Lost something?</h1>
+    <p class="subtitle">We'll help you retrace the clues.</p>
+
+    <section class="panel">
+      <div class="inner">
+        <p class="hint">
+          These details are optional, but they can help us narrow the search.<br />
+          <strong>Your story is still the most important clue.</strong>
+        </p>
+
+        <div class="grid">
+          <div>
+            <label>Item</label>
+            <select>
+              <option>Optional</option>
+              <option>AirPods</option>
+              <option>Wallet</option>
+              <option>Keys</option>
+              <option>Other...</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Last known place</label>
+            <select>
+              <option>Optional</option>
+              <option>Home</option>
+              <option>Car</option>
+              <option>Work</option>
+              <option>Other...</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Approximate time</label>
+            <select>
+              <option>Not sure</option>
+              <option>Morning</option>
+              <option>Afternoon</option>
+              <option>Evening</option>
+              <option>Night</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Date optional</label>
+            <select>
+              <option>Not sure</option>
+              <option>Today</option>
+              <option>Yesterday</option>
+              <option>Pick a date</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="story">
+          <label>Tell us what happened</label>
+          <textarea placeholder="Where did you last remember using it?
+What happened next?
+Anything unusual you remember?"></textarea>
+        </div>
+
+        <button class="cta">✦ FIND MY ITEM</button>
+
+        <div class="examples">
+          <button class="chip">AirPods</button>
+          <button class="chip">Wallet</button>
+          <button class="chip">Wedding Ring</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
