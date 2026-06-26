@@ -277,6 +277,26 @@ body::after {
     border-color: rgba(214, 168, 79, 0.32);
     background: rgba(214, 168, 79, 0.08);
   }
+
+  .story-collapsed-card {
+    border: 1px solid rgba(214, 168, 79, 0.18);
+    border-radius: 18px;
+    background: rgba(0, 0, 0, 0.34);
+    padding: 18px 20px;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .story-collapsed-card:hover {
+    border-color: rgba(214, 168, 79, 0.32);
+    background: rgba(12, 10, 7, 0.48);
+    box-shadow: 0 0 0 1px rgba(214, 168, 79, 0.04);
+  }
+
+  .story-collapsed-action {
+    border: 1px solid rgba(214, 168, 79, 0.22);
+    background: rgba(214, 168, 79, 0.08);
+    color: #f0dfbf;
+  }
 }
 
 @media (max-width: 760px) {

@@ -116,6 +116,73 @@ const loadingSteps = [
 const fieldClassName =
   "mt-2 w-full rounded-[16px] border border-[rgba(214,168,79,0.24)] bg-[rgba(10,9,7,0.58)] px-5 py-[17px] font-body text-base text-[#fbf1dc] outline-none transition placeholder:text-[rgba(245,234,210,0.58)] focus:border-[rgba(214,168,79,0.78)] focus:bg-[rgba(8,7,5,0.72)] focus:ring-4 focus:ring-[rgba(214,168,79,0.1)]";
 
+function formatDetailTime(details: OptionalDetailInputs): string | null {
+  const timeLabels: Record<string, string> = {
+    early_morning: "early morning",
+    morning: "morning",
+    afternoon: "afternoon",
+    evening: "evening",
+    night: "night",
+    late_night: "late night"
+  };
+
+  if (details.selectedTimeMode === "approximate_hour") {
+    return details.selectedHour?.trim() || null;
+  }
+
+  if (!details.selectedTimeMode || details.selectedTimeMode === "not_sure") {
+    return null;
+  }
+
+  return timeLabels[details.selectedTimeMode] ?? null;
+}
+
+function formatDetailDate(details: OptionalDetailInputs): string | null {
+  if (details.selectedDateMode === "today") {
+    return "today";
+  }
+
+  if (details.selectedDateMode === "yesterday") {
+    return "yesterday";
+  }
+
+  if (details.selectedDateMode === "pick_date") {
+    return details.selectedDate?.trim() || null;
+  }
+
+  return null;
+}
+
+function buildStructuredStory({
+  selectedItemType,
+  selectedPlace,
+  details
+}: {
+  selectedItemType?: string;
+  selectedPlace?: string;
+  details: OptionalDetailInputs;
+}): string {
+  const item = selectedItemType?.trim() || "item";
+  const parts = [`I lost my ${item}.`];
+
+  if (selectedPlace?.trim()) {
+    parts.push(`The last known place was ${selectedPlace.trim()}.`);
+  }
+
+  const time = formatDetailTime(details);
+  const date = formatDetailDate(details);
+
+  if (date && time) {
+    parts.push(`It was around ${time} on ${date}.`);
+  } else if (time) {
+    parts.push(`It was around ${time}.`);
+  } else if (date) {
+    parts.push(`This happened ${date}.`);
+  }
+
+  return parts.join(" ");
+}
+
 function LoadingState() {
   const [activeStep, setActiveStep] = useState(0);
 
@@ -197,6 +264,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<FeedbackState>(null);
   const [showAdvancedAnalysis, setShowAdvancedAnalysis] = useState(false);
+  const [storyExpanded, setStoryExpanded] = useState(false);
   const [customItemType, setCustomItemType] = useState("");
   const [customPlace, setCustomPlace] = useState("");
   const [details, setDetails] = useState<OptionalDetailInputs>({
@@ -205,6 +273,8 @@ export default function HomePage() {
   });
 
   const hasResult = Boolean(report);
+  const hasStory = input.trim().length > 0;
+  const isStoryExpanded = storyExpanded || hasStory;
 
   const introCopy = useMemo(() => {
     if (hasResult) {
@@ -232,17 +302,13 @@ export default function HomePage() {
 
   function handleExampleClick(example: string, label: string) {
     setInput(example);
+    setStoryExpanded(true);
     setError(null);
     trackEvent("example_prompt_selected", { example: label });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!input.trim()) {
-      setError("Add a few details first so we can retrace the clues with you.");
-      return;
-    }
 
     setIsLoading(true);
     setError(null);
@@ -265,8 +331,24 @@ export default function HomePage() {
         (details.selectedTimeMode && details.selectedTimeMode !== "not_sure")
     );
 
+    const submissionInput = input.trim()
+      ? input.trim()
+      : usedOptionalDetails
+        ? buildStructuredStory({
+            selectedItemType,
+            selectedPlace,
+            details
+          })
+        : "";
+
+    if (!submissionInput) {
+      setIsLoading(false);
+      setError("Add your story or a few details first so we can retrace the clues with you.");
+      return;
+    }
+
     trackEvent("analysis_started", {
-      inputLength: input.trim().length,
+      inputLength: submissionInput.length,
       usedOptionalDetails
     });
 
@@ -277,7 +359,7 @@ export default function HomePage() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          input,
+          input: submissionInput,
           ...details,
           selectedItemType,
           selectedPlace
@@ -330,6 +412,7 @@ export default function HomePage() {
     setUsedFallback(false);
     setFeedbackState(null);
     setShowAdvancedAnalysis(false);
+    setStoryExpanded(false);
     setCustomItemType("");
     setCustomPlace("");
     setDetails({
@@ -668,18 +751,39 @@ export default function HomePage() {
                   </div>
 
                   <div className="story-block mt-2">
-                    <label className="block">
-                      <span className="eyebrow-text text-[11px] text-[#b69256]">
-                        Tell us what happened
-                      </span>
-                      <textarea
-                        className="mt-2 min-h-[150px] w-full resize-y rounded-[16px] border border-[rgba(214,168,79,0.24)] bg-[rgba(10,9,7,0.58)] px-5 py-[17px] font-body text-base leading-[1.65] text-[#fbf1dc] shadow-[0_0_0_1px_rgba(214,168,79,0.03),0_24px_70px_rgba(0,0,0,0.32)] outline-none transition placeholder:text-[rgba(245,234,210,0.58)] focus:border-[rgba(214,168,79,0.78)] focus:bg-[rgba(8,7,5,0.72)] focus:ring-4 focus:ring-[rgba(214,168,79,0.1)] disabled:cursor-not-allowed disabled:opacity-70"
-                        value={input}
-                        onChange={(event) => setInput(event.target.value)}
-                        disabled={isLoading}
-                        placeholder={`Where did you last remember using it?\nWhat happened next?\nAnything unusual you remember?`}
-                      />
-                    </label>
+                    {isStoryExpanded ? (
+                      <label className="block">
+                        <span className="eyebrow-text text-[11px] text-[#b69256]">
+                          Tell us what happened
+                        </span>
+                        <p className="mt-2 font-body text-sm leading-7 text-[#cdbfa5]">
+                          Add your story in your own words. This is the most important clue.
+                        </p>
+                        <textarea
+                          className="mt-3 min-h-[150px] w-full resize-y rounded-[16px] border border-[rgba(214,168,79,0.24)] bg-[rgba(10,9,7,0.58)] px-5 py-[17px] font-body text-base leading-[1.65] text-[#fbf1dc] shadow-[0_0_0_1px_rgba(214,168,79,0.03),0_24px_70px_rgba(0,0,0,0.32)] outline-none transition placeholder:text-[rgba(245,234,210,0.58)] focus:border-[rgba(214,168,79,0.78)] focus:bg-[rgba(8,7,5,0.72)] focus:ring-4 focus:ring-[rgba(214,168,79,0.1)] disabled:cursor-not-allowed disabled:opacity-70"
+                          value={input}
+                          onChange={(event) => setInput(event.target.value)}
+                          disabled={isLoading}
+                          placeholder={`Where did you last remember using it?\nWhat happened next?\nAnything unusual you remember?`}
+                        />
+                      </label>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setStoryExpanded(true)}
+                        className="story-collapsed-card w-full text-left"
+                      >
+                        <span className="eyebrow-text text-[11px] text-[#b69256]">
+                          Tell us what happened
+                        </span>
+                        <p className="mt-2 font-body text-sm leading-7 text-[#cdbfa5]">
+                          Add your story in your own words. This is the most important clue.
+                        </p>
+                        <span className="story-collapsed-action mt-4 inline-flex items-center rounded-full px-4 py-2 font-body text-sm font-semibold">
+                          Write story
+                        </span>
+                      </button>
+                    )}
                   </div>
 
                   <button
