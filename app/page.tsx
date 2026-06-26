@@ -759,7 +759,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="block">
-                      <span className="block eyebrow-text text-[11px] text-[#b69256]">Date (optional)</span>
+                      <span className="block eyebrow-text text-[11px] text-[#b69256]">Date</span>
                       <SimpleSelect
                         value={details.selectedDateMode ?? ""}
                         onValueChange={(value) =>
