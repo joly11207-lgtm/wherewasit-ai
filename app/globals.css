@@ -378,7 +378,8 @@ body::after {
   }
 
   .simple-select-option:hover,
-  .simple-select-option:focus-visible {
+  .simple-select-option:focus-visible,
+  .simple-select-option-highlighted {
     background: rgba(214, 168, 79, 0.1);
   }
 

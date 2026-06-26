@@ -642,7 +642,7 @@ export default function HomePage() {
                   <p className="form-hint form-hint-strong">Your story is still the most important clue.</p>
 
                   <div className="field-grid mt-4">
-                    <label className="block">
+                    <div className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Item</span>
                       <SimpleSelect
                         value={details.selectedItemType ?? ""}
@@ -665,9 +665,9 @@ export default function HomePage() {
                           className={fieldClassName}
                         />
                       ) : null}
-                    </label>
+                    </div>
 
-                    <label className="block">
+                    <div className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Last known place</span>
                       <SimpleSelect
                         value={details.selectedPlace ?? ""}
@@ -690,9 +690,9 @@ export default function HomePage() {
                           className={fieldClassName}
                         />
                       ) : null}
-                    </label>
+                    </div>
 
-                    <label className="block">
+                    <div className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Approximate time</span>
                       <SimpleSelect
                         value={details.selectedTimeMode ?? ""}
@@ -721,9 +721,9 @@ export default function HomePage() {
                           ))}
                         </select>
                       ) : null}
-                    </label>
+                    </div>
 
-                    <label className="block">
+                    <div className="block">
                       <span className="block eyebrow-text text-[11px] text-[#b69256]">Date (optional)</span>
                       <SimpleSelect
                         value={details.selectedDateMode ?? ""}
@@ -745,7 +745,7 @@ export default function HomePage() {
                           className={fieldClassName}
                         />
                       ) : null}
-                    </label>
+                    </div>
                   </div>
 
                   <div className="story-block mt-2">

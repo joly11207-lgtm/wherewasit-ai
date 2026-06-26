@@ -24,8 +24,8 @@ export function SimpleSelect({
   ariaLabel
 }: SimpleSelectProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [open, setOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   const selectedIndex = useMemo(
     () => options.findIndex((option) => option.value === value),
@@ -33,6 +33,12 @@ export function SimpleSelect({
   );
 
   const selectedOption = selectedIndex >= 0 ? options[selectedIndex] : null;
+
+  useEffect(() => {
+    if (!open) {
+      setHighlightedIndex(-1);
+    }
+  }, [open]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -56,17 +62,6 @@ export function SimpleSelect({
     };
   }, []);
 
-  function focusOption(index: number) {
-    window.requestAnimationFrame(() => {
-      optionRefs.current[index]?.focus();
-    });
-  }
-
-  function openAndFocus(index: number) {
-    setOpen(true);
-    focusOption(index);
-  }
-
   return (
     <div className="simple-select" ref={wrapperRef}>
       <button
@@ -75,16 +70,19 @@ export function SimpleSelect({
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
+        data-open={open}
         onClick={() => setOpen((current) => !current)}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown") {
             event.preventDefault();
-            openAndFocus(selectedIndex >= 0 ? selectedIndex : 0);
+            setOpen(true);
+            setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
           }
 
           if (event.key === "ArrowUp") {
             event.preventDefault();
-            openAndFocus(selectedIndex >= 0 ? selectedIndex : options.length - 1);
+            setOpen(true);
+            setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : options.length - 1);
           }
         }}
       >
@@ -94,25 +92,26 @@ export function SimpleSelect({
         <ChevronDown className={`simple-select-chevron ${open ? "simple-select-chevron-open" : ""}`} />
       </button>
 
-      {open ? (
+      {open && (
         <div className="simple-select-menu" role="listbox" aria-label={ariaLabel}>
           {options.map((option, index) => {
             const selected = option.value === value;
+            const highlighted = index === highlightedIndex;
 
             return (
               <button
                 key={option.value}
-                ref={(element) => {
-                  optionRefs.current[index] = element;
-                }}
                 type="button"
                 role="option"
                 aria-selected={selected}
-                className={`simple-select-option ${selected ? "simple-select-option-selected" : ""}`}
+                className={`simple-select-option ${selected ? "simple-select-option-selected" : ""} ${
+                  highlighted ? "simple-select-option-highlighted" : ""
+                }`}
                 onClick={() => {
                   onValueChange(option.value);
                   setOpen(false);
                 }}
+                onMouseEnter={() => setHighlightedIndex(index)}
                 onKeyDown={(event) => {
                   if (event.key === "Escape") {
                     event.preventDefault();
@@ -121,12 +120,12 @@ export function SimpleSelect({
 
                   if (event.key === "ArrowDown") {
                     event.preventDefault();
-                    focusOption((index + 1) % options.length);
+                    setHighlightedIndex((index + 1) % options.length);
                   }
 
                   if (event.key === "ArrowUp") {
                     event.preventDefault();
-                    focusOption((index - 1 + options.length) % options.length);
+                    setHighlightedIndex((index - 1 + options.length) % options.length);
                   }
 
                   if (event.key === "Enter" || event.key === " ") {
@@ -142,7 +141,7 @@ export function SimpleSelect({
             );
           })}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
