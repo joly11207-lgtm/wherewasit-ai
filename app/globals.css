@@ -323,7 +323,9 @@ body::after {
 
   .simple-select-placeholder,
   .simple-select-value {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -375,6 +377,21 @@ body::after {
       background 180ms ease,
       border-color 180ms ease,
       color 180ms ease;
+  }
+
+  .simple-select-option-label {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .simple-select-option-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: #d8b46a;
+    opacity: 0.9;
   }
 
   .simple-select-option:hover,

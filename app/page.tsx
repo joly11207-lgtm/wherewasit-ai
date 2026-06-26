@@ -1,5 +1,23 @@
 "use client";
 
+import {
+  Backpack,
+  Bath,
+  Bed,
+  Building2,
+  Car,
+  CookingPot,
+  FileText,
+  Gem,
+  Glasses,
+  Headphones,
+  Home,
+  KeyRound,
+  MapPin,
+  Package,
+  Smartphone,
+  Wallet
+} from "lucide-react";
 import Link from "next/link";
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
@@ -47,10 +65,17 @@ const itemTypeOptions = [
   "Other..."
 ];
 
-const itemSelectOptions: SimpleSelectOption[] = itemTypeOptions.map((option) => ({
-  value: option === "Other..." ? OTHER_OPTION : option,
-  label: option
-}));
+const itemSelectOptions: SimpleSelectOption[] = [
+  { value: "Keys", label: "Keys", icon: KeyRound },
+  { value: "Wallet", label: "Wallet", icon: Wallet },
+  { value: "Phone", label: "Phone", icon: Smartphone },
+  { value: "AirPods / Earbuds", label: "AirPods / Earbuds", icon: Headphones },
+  { value: "Ring / Jewelry", label: "Ring / Jewelry", icon: Gem },
+  { value: "Passport / Documents", label: "Passport / Documents", icon: FileText },
+  { value: "Glasses", label: "Glasses", icon: Glasses },
+  { value: "Bag / Backpack", label: "Bag / Backpack", icon: Backpack },
+  { value: OTHER_OPTION, label: "Other...", icon: Package }
+];
 
 const placeOptions = [
   "Home",
@@ -67,10 +92,20 @@ const placeOptions = [
   "Other..."
 ];
 
-const placeSelectOptions: SimpleSelectOption[] = placeOptions.map((option) => ({
-  value: option === "Other..." ? OTHER_OPTION : option,
-  label: option
-}));
+const placeSelectOptions: SimpleSelectOption[] = [
+  { value: "Home", label: "Home", icon: Home },
+  { value: "Bedroom", label: "Bedroom", icon: Bed },
+  { value: "Bathroom", label: "Bathroom", icon: Bath },
+  { value: "Kitchen", label: "Kitchen", icon: CookingPot },
+  { value: "Car", label: "Car", icon: Car },
+  { value: "Work / Office", label: "Work / Office", icon: Building2 },
+  { value: "School", label: "School", icon: Building2 },
+  { value: "Store", label: "Store", icon: MapPin },
+  { value: "Hotel / Travel", label: "Hotel / Travel", icon: MapPin },
+  { value: "Outside", label: "Outside", icon: MapPin },
+  { value: "Not sure", label: "Not sure", icon: MapPin },
+  { value: OTHER_OPTION, label: "Other...", icon: MapPin }
+];
 
 const dateOptions = [
   { value: "today", label: "Today" },

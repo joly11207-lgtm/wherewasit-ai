@@ -1,11 +1,12 @@
 "use client";
 
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export type SimpleSelectOption = {
   value: string;
   label: string;
+  icon?: LucideIcon;
 };
 
 type SimpleSelectProps = {
@@ -33,6 +34,7 @@ export function SimpleSelect({
   );
 
   const selectedOption = selectedIndex >= 0 ? options[selectedIndex] : null;
+  const SelectedIcon = selectedOption?.icon;
 
   useEffect(() => {
     if (!open) {
@@ -87,7 +89,8 @@ export function SimpleSelect({
         }}
       >
         <span className={selectedOption ? "simple-select-value" : "simple-select-placeholder"}>
-          {selectedOption?.label ?? placeholder}
+          {SelectedIcon ? <SelectedIcon className="simple-select-option-icon" /> : null}
+          <span>{selectedOption?.label ?? placeholder}</span>
         </span>
         <ChevronDown className={`simple-select-chevron ${open ? "simple-select-chevron-open" : ""}`} />
       </button>
@@ -97,6 +100,7 @@ export function SimpleSelect({
           {options.map((option, index) => {
             const selected = option.value === value;
             const highlighted = index === highlightedIndex;
+            const OptionIcon = option.icon;
 
             return (
               <button
@@ -135,7 +139,10 @@ export function SimpleSelect({
                   }
                 }}
               >
-                <span>{option.label}</span>
+                <span className="simple-select-option-label">
+                  {OptionIcon ? <OptionIcon className="simple-select-option-icon" /> : null}
+                  <span>{option.label}</span>
+                </span>
                 {selected ? <Check className="simple-select-check" /> : null}
               </button>
             );
