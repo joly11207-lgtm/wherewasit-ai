@@ -1,0 +1,17 @@
+{
+  "id": "backpack_hotel",
+  "title": "Backpack lost at Hotel during packing",
+  "input": {
+    "item": "Bag / Backpack",
+    "place": "Hotel",
+    "time": "Morning",
+    "date": "Today",
+    "story": "I was packing my backpack in the hotel room, moved things near the bed and luggage area, and then left to check out."
+  },
+  "expected": {
+    "scene": "Hotel",
+    "mustIncludePriorityTerms": ["backpack pocket", "suitcase", "under bed edge"],
+    "mustIncludeSignals": ["containerZone", "hiddenCorner", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["couch cushions", "gym bag", "printer station"]
+  }
+}

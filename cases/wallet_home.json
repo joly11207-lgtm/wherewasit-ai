@@ -1,0 +1,17 @@
+{
+  "id": "wallet_home",
+  "title": "Wallet lost at Home after coming back from car",
+  "input": {
+    "item": "Wallet",
+    "place": "Home",
+    "time": "Afternoon",
+    "date": "Today",
+    "story": "I came back from the car with groceries, walked into the house, set things down near the entryway, and now I cannot find my wallet."
+  },
+  "expected": {
+    "scene": "Home",
+    "mustIncludePriorityTerms": ["daily bag", "jacket pocket", "mail stack"],
+    "mustIncludeSignals": ["containerZone", "transitionPath", "hiddenCorner"],
+    "mustNotIncludePriorityTerms": ["gym bag", "airport security tray", "shower shelf"]
+  }
+}

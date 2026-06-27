@@ -1,0 +1,17 @@
+{
+  "id": "credit_card_cafe",
+  "title": "Credit card lost at Cafe after paying",
+  "input": {
+    "item": "Credit Card / Wallet",
+    "place": "Cafe",
+    "time": "Afternoon",
+    "date": "Today",
+    "story": "I paid at a cafe, sat down with my drink, moved my bag, and later realized my credit card was missing."
+  },
+  "expected": {
+    "scene": "Cafe",
+    "mustIncludePriorityTerms": ["payment terminal", "chair area", "receipt stack", "bag pocket", "counter area"],
+    "mustIncludeSignals": ["containerZone", "hiddenCorner", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["gym bag", "shower shelf", "passport holder"]
+  }
+}

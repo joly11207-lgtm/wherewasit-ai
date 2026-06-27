@@ -1,0 +1,17 @@
+{
+  "id": "keys_car",
+  "title": "Keys lost in Car after parking",
+  "input": {
+    "item": "Keys",
+    "place": "Car",
+    "time": "Evening",
+    "date": "Today",
+    "story": "I had my keys in the car, parked, grabbed my bag, and then could not remember where I put them."
+  },
+  "expected": {
+    "scene": "Car",
+    "mustIncludePriorityTerms": ["center console", "door pocket", "seat gap"],
+    "mustIncludeSignals": ["containerZone", "hiddenCorner", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["passport holder", "meeting room", "shower shelf"]
+  }
+}

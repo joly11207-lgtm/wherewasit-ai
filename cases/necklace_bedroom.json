@@ -1,0 +1,17 @@
+{
+  "id": "necklace_bedroom",
+  "title": "Necklace lost in Bedroom while changing clothes",
+  "input": {
+    "item": "Necklace / Jewelry",
+    "place": "Bedroom",
+    "time": "Morning",
+    "date": "Today",
+    "story": "I took off my necklace in the bedroom while changing clothes, set it near the bed, and then moved things into the closet."
+  },
+  "expected": {
+    "scene": "Bedroom",
+    "mustIncludePriorityTerms": ["under blankets", "hoodie pocket", "nightstand drawer"],
+    "mustIncludeSignals": ["hiddenCorner", "containerZone", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["passport holder", "airport security tray", "shower shelf"]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "earbuds_living_room",
+  "title": "Earbuds lost in Living Room after watching TV",
+  "input": {
+    "item": "AirPods / Earbuds",
+    "place": "Living Room",
+    "time": "Night",
+    "date": "Today",
+    "story": "I used my earbuds on the couch in the living room, grabbed a blanket, got up to charge my phone, and now I cannot find them."
+  },
+  "expected": {
+    "scene": "Living Room",
+    "mustIncludePriorityTerms": ["between cushions", "under a throw blanket", "media console"],
+    "mustIncludeSignals": ["hiddenCorner", "containerZone", "electronicArea"],
+    "mustNotIncludePriorityTerms": ["passport holder", "airport security tray", "shower shelf"]
+  }
+}

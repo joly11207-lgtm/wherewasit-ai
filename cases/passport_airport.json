@@ -1,0 +1,17 @@
+{
+  "id": "passport_airport",
+  "title": "Passport lost at Airport before boarding",
+  "input": {
+    "item": "Passport / Documents",
+    "place": "Airport",
+    "time": "Morning",
+    "date": "Today",
+    "story": "I checked my passport at the airport, went through security, put documents back into my bag, and then could not find it at the gate."
+  },
+  "expected": {
+    "scene": "Travel",
+    "mustIncludePriorityTerms": ["passport holder", "airport security tray", "backpack"],
+    "mustIncludeSignals": ["documentZone", "containerZone", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["couch cushions", "gym bag", "shower shelf"]
+  }
+}

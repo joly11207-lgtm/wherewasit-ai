@@ -1,0 +1,17 @@
+{
+  "id": "watch_beach",
+  "title": "Watch lost at Beach after packing up",
+  "input": {
+    "item": "Watch / Jewelry",
+    "place": "Beach",
+    "time": "Afternoon",
+    "date": "Today",
+    "story": "I took off my watch at the beach, set it near my towel and bag, packed up to leave, and then noticed it was missing."
+  },
+  "expected": {
+    "scene": "Other",
+    "mustIncludePriorityTerms": ["bag pocket", "under nearby objects", "table edge"],
+    "mustIncludeSignals": ["containerZone", "hiddenCorner", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["passport holder", "meeting room", "shower shelf"]
+  }
+}

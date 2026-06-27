@@ -1,0 +1,17 @@
+{
+  "id": "airpods_gym",
+  "title": "AirPods lost at Gym after shower and packing bag",
+  "input": {
+    "item": "AirPods / Earbuds",
+    "place": "Gym",
+    "time": "Evening",
+    "date": "Today",
+    "story": "I lost my AirPods at the gym. I showered, packed my bag, used the sink area, and then headed to the car."
+  },
+  "expected": {
+    "scene": "Gym",
+    "mustIncludePriorityTerms": ["gym bag", "locker", "locker gaps"],
+    "mustIncludeSignals": ["containerZone", "hiddenCorner", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["couch cushions", "passport holder", "printer station"]
+  }
+}

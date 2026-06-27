@@ -1,0 +1,17 @@
+{
+  "id": "id_card_school",
+  "title": "ID card lost at School after class",
+  "input": {
+    "item": "ID Card / Documents",
+    "place": "School",
+    "time": "Afternoon",
+    "date": "Today",
+    "story": "I used my ID card at school, went to class, put my things on the desk, packed my bag, and later noticed the card was gone."
+  },
+  "expected": {
+    "scene": "Office",
+    "mustIncludePriorityTerms": ["desk drawer", "work bag", "under papers"],
+    "mustIncludeSignals": ["documentZone", "containerZone", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["couch cushions", "gym bag", "shower shelf"]
+  }
+}

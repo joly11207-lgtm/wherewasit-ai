@@ -1,0 +1,17 @@
+{
+  "id": "ring_kitchen",
+  "title": "Ring lost in Kitchen after washing up",
+  "input": {
+    "item": "Ring / Jewelry",
+    "place": "Kitchen",
+    "time": "Evening",
+    "date": "Today",
+    "story": "I took off my ring in the kitchen while washing dishes, set it near the sink, moved a dish towel, and then started putting groceries away."
+  },
+  "expected": {
+    "scene": "Kitchen",
+    "mustIncludePriorityTerms": ["sink area", "under a dish towel", "grocery bags"],
+    "mustIncludeSignals": ["wetArea", "hiddenCorner", "containerZone"],
+    "mustNotIncludePriorityTerms": ["passport holder", "meeting room", "airport security tray"]
+  }
+}

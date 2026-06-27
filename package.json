@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "eval:engine": "tsx scripts/evaluateEngine.ts",
+    "evaluate:engine": "tsx scripts/evaluateEngine.ts",
     "eval:narrator": "tsx scripts/evaluateNarrator.ts"
   },
   "dependencies": {

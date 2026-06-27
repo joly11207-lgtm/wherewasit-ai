@@ -1,0 +1,17 @@
+{
+  "id": "wallet_grocery_store",
+  "title": "Wallet lost after grocery store stop",
+  "input": {
+    "item": "Wallet",
+    "place": "Car",
+    "time": "Afternoon",
+    "date": "Today",
+    "story": "I paid at the grocery store, loaded bags into the car, drove home, and now I cannot find my wallet."
+  },
+  "expected": {
+    "scene": "Car",
+    "mustIncludePriorityTerms": ["center console", "door pocket", "cup holder"],
+    "mustIncludeSignals": ["containerZone", "transitionPath", "hiddenCorner"],
+    "mustNotIncludePriorityTerms": ["couch cushions", "passport holder", "shower shelf"]
+  }
+}

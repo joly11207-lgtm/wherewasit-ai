@@ -1,0 +1,17 @@
+{
+  "id": "phone_uber",
+  "title": "Phone lost in Uber after getting out",
+  "input": {
+    "item": "Phone",
+    "place": "Uber",
+    "time": "Night",
+    "date": "Today",
+    "story": "I used my phone in the Uber, put it down near the seat while grabbing my bag, got out, and then realized it was missing."
+  },
+  "expected": {
+    "scene": "Car",
+    "mustIncludePriorityTerms": ["center console", "seat gap", "door pocket"],
+    "mustIncludeSignals": ["hiddenCorner", "containerZone", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["passport holder", "meeting room", "shower shelf"]
+  }
+}

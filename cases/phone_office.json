@@ -1,0 +1,17 @@
+{
+  "id": "phone_office",
+  "title": "Phone lost in Office after meeting",
+  "input": {
+    "item": "Phone",
+    "place": "Office",
+    "time": "Afternoon",
+    "date": "Today",
+    "story": "I had my phone in the office, went into a meeting, came back to my desk, packed my laptop, and then realized it was missing."
+  },
+  "expected": {
+    "scene": "Office",
+    "mustIncludePriorityTerms": ["work bag", "laptop sleeve", "under the desk edge"],
+    "mustIncludeSignals": ["electronicArea", "containerZone", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["couch cushions", "between sheets", "shower shelf"]
+  }
+}

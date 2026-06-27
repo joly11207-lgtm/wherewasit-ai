@@ -1,0 +1,17 @@
+{
+  "id": "headphones_office",
+  "title": "Headphones lost in Office after packing up",
+  "input": {
+    "item": "Headphones",
+    "place": "Office",
+    "time": "Afternoon",
+    "date": "Today",
+    "story": "I had my headphones at the office, moved between my desk and a meeting room, packed my laptop, and then could not find them."
+  },
+  "expected": {
+    "scene": "Office",
+    "mustIncludePriorityTerms": ["work bag", "laptop sleeve", "under the desk edge"],
+    "mustIncludeSignals": ["containerZone", "transitionPath", "electronicArea"],
+    "mustNotIncludePriorityTerms": ["couch cushions", "passport holder", "shower shelf"]
+  }
+}

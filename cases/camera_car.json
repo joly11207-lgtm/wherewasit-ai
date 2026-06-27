@@ -1,0 +1,17 @@
+{
+  "id": "camera_car",
+  "title": "Camera lost in Car after unloading",
+  "input": {
+    "item": "Camera",
+    "place": "Car",
+    "time": "Afternoon",
+    "date": "Today",
+    "story": "I had my camera in the car, parked, grabbed a bag, and unloaded some things before noticing it was gone."
+  },
+  "expected": {
+    "scene": "Car",
+    "mustIncludePriorityTerms": ["center console", "door pocket", "seat gap"],
+    "mustIncludeSignals": ["containerZone", "hiddenCorner", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["passport holder", "meeting room", "shower shelf"]
+  }
+}

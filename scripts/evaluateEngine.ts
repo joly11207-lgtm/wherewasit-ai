@@ -1,65 +1,47 @@
-import { analyzeClues } from "../lib/analyzeClues";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 
-type Scenario = {
-  name: string;
-  input: string;
+import { runInvestigationEngine } from "../lib/engine";
+import { RAW_HEURISTIC_COUNT } from "../lib/engine/heuristics";
+import { Direction, EngineInput, HeuristicWeights, InvestigationEngineResult } from "../lib/engine/types";
+
+type EngineCase = {
+  id: string;
+  title: string;
+  input: EngineInput;
+  expected: {
+    scene: string;
+    mustIncludePriorityTerms: string[];
+    mustIncludeSignals: string[];
+    mustNotIncludePriorityTerms: string[];
+  };
 };
 
-const scenarios: Scenario[] = [
-  {
-    name: "AirPods between bedroom, car, and office",
-    input:
-      "I lost my AirPods. I last used them in my bedroom this morning, then drove to work and sat at my desk."
-  },
-  {
-    name: "Wedding ring after showering",
-    input:
-      "I misplaced my wedding ring. I took it off in the bathroom before showering, then changed clothes in the bedroom."
-  },
-  {
-    name: "Wallet after grocery shopping",
-    input:
-      "I can't find my wallet. I used it at the grocery store, drove home, carried bags inside, and dropped things on the kitchen counter."
-  },
-  {
-    name: "Passport before travel",
-    input:
-      "I lost my passport while packing for a trip. I had it on my desk last night, then put things into my travel bag and jacket."
-  },
-  {
-    name: "Glasses near couch and bedroom",
-    input:
-      "I misplaced my glasses after watching TV on the couch and going to bed. I remember them in the living room earlier tonight."
-  },
-  {
-    name: "Keys after arriving home",
-    input:
-      "I lost my keys. I had them when I got out of the car, then I came inside, put groceries down, and rushed to change clothes."
-  },
-  {
-    name: "Phone lost in a hotel room",
-    input:
-      "I can't find my phone. I remember using it in my hotel room last night, then I showered and packed my bag before checkout."
-  },
-  {
-    name: "Backpack after school and work",
-    input:
-      "I lost my backpack. I had it at school this afternoon, drove to work, then came home and dropped things near the entryway."
-  },
-  {
-    name: "Jewelry lost during laundry",
-    input:
-      "I misplaced my jewelry. I took it off in the bedroom while doing laundry, then carried clothes to the hamper and laundry room."
-  },
-  {
-    name: "Documents between office and car",
-    input:
-      "I lost some documents. I had them on my office desk before leaving work, then walked to the car and drove home."
-  }
-];
+type CaseEvaluation = {
+  testCase: EngineCase;
+  result: InvestigationEngineResult;
+  passed: boolean;
+  reasons: string[];
+  matchedPriorityTerms: string[];
+  matchedSignals: string[];
+  forbiddenPriorityTerms: string[];
+  topEnvironmentContributors: string[];
+  topBehaviorContributors: string[];
+};
+
+type BreakdownRow = {
+  key: string;
+  caseCount: number;
+  scenePasses: number;
+  totalPriorityTerms: number;
+  matchedPriorityTerms: number;
+  totalSignalTerms: number;
+  matchedSignals: number;
+  failedCaseIds: string[];
+};
 
 function divider(label?: string): void {
-  const line = "=".repeat(78);
+  const line = "=".repeat(96);
   console.log(`\n${line}`);
   if (label) {
     console.log(label);
@@ -67,78 +49,312 @@ function divider(label?: string): void {
   }
 }
 
-function printJson(title: string, value: unknown): void {
-  console.log(`${title}:`);
-  console.log(JSON.stringify(value, null, 2));
+function normalize(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function includesNormalized(haystack: string, needle: string): boolean {
+  return normalize(haystack).includes(normalize(needle));
+}
+
+function round(value: number): number {
+  return Number(value.toFixed(2));
+}
+
+function aggregateDirectionContributors(heuristics: HeuristicWeights[]): string[] {
+  const totals = heuristics.reduce<Record<string, number>>((accumulator, heuristic) => {
+    Object.entries(heuristic.directionWeights).forEach(([key, value]) => {
+      accumulator[key] = round((accumulator[key] ?? 0) + (value ?? 0) * heuristic.confidence);
+    });
+    return accumulator;
+  }, {});
+
+  return Object.entries(totals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([key, value]) => `${key}:${value}`);
+}
+
+function aggregateWeightContributors(
+  heuristics: HeuristicWeights[],
+  selector: (heuristic: HeuristicWeights) => Record<string, number>
+): string[] {
+  const totals = heuristics.reduce<Record<string, number>>((accumulator, heuristic) => {
+    Object.entries(selector(heuristic)).forEach(([key, value]) => {
+      accumulator[key] = round((accumulator[key] ?? 0) + value * heuristic.confidence);
+    });
+    return accumulator;
+  }, {});
+
+  return Object.entries(totals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([key, value]) => `${key}:${value}`);
+}
+
+function extractContributorKeys(entries: string[]): string[] {
+  return entries.map((entry) => entry.split(":")[0]?.trim()).filter(Boolean);
+}
+
+function formatDirections(result: InvestigationEngineResult): string[] {
+  return result.topDirections.map(
+    (entry, index) =>
+      `${index + 1}. ${entry.direction} (${entry.score})${entry.tags.length ? ` | tags: ${entry.tags.join(", ")}` : ""}`
+  );
+}
+
+function loadCases(): EngineCase[] {
+  const casesDirectory = path.join(process.cwd(), "cases");
+  return readdirSync(casesDirectory)
+    .filter((fileName) => fileName.endsWith(".json"))
+    .sort((left, right) => left.localeCompare(right))
+    .map((fileName) => {
+      const filePath = path.join(casesDirectory, fileName);
+      const contents = readFileSync(filePath, "utf8");
+      return JSON.parse(contents) as EngineCase;
+    });
+}
+
+function evaluateCase(testCase: EngineCase): CaseEvaluation {
+  const result = runInvestigationEngine(testCase.input);
+  const reasons: string[] = [];
+  const searchLabels = result.searchPriority.slice(0, 5).map((entry) => entry.label);
+  const signalPool = new Set<string>([
+    ...result.topDirections.flatMap((entry) => entry.tags),
+    ...extractContributorKeys(aggregateWeightContributors(result.heuristicWeights, (entry) => entry.environmentWeights)),
+    ...extractContributorKeys(aggregateWeightContributors(result.heuristicWeights, (entry) => entry.behaviorWeights)),
+    ...result.searchPriority.flatMap((entry) => entry.relatedTags)
+  ].map((entry) => normalize(entry)));
+
+  const matchedPriorityTerms = testCase.expected.mustIncludePriorityTerms.filter((term) =>
+    searchLabels.some((label) => includesNormalized(label, term))
+  );
+  const matchedSignals = testCase.expected.mustIncludeSignals.filter((signal) =>
+    Array.from(signalPool).some((entry) => includesNormalized(entry, signal))
+  );
+  const forbiddenPriorityTerms = testCase.expected.mustNotIncludePriorityTerms.filter((term) =>
+    searchLabels.some((label) => includesNormalized(label, term))
+  );
+
+  if (!includesNormalized(result.sceneProfile.profile.label, testCase.expected.scene)) {
+    reasons.push(`Scene mismatch: expected ${testCase.expected.scene}, got ${result.sceneProfile.profile.label}.`);
+  }
+
+  if (matchedPriorityTerms.length === 0) {
+    reasons.push(
+      `No expected priority term matched. Expected one of: ${testCase.expected.mustIncludePriorityTerms.join(", ")}.`
+    );
+  }
+
+  if (matchedSignals.length === 0) {
+    reasons.push(`No expected signal matched. Expected one of: ${testCase.expected.mustIncludeSignals.join(", ")}.`);
+  }
+
+  if (forbiddenPriorityTerms.length > 0) {
+    reasons.push(`Forbidden priority terms appeared: ${forbiddenPriorityTerms.join(", ")}.`);
+  }
+
+  return {
+    testCase,
+    result,
+    passed: reasons.length === 0,
+    reasons,
+    matchedPriorityTerms,
+    matchedSignals,
+    forbiddenPriorityTerms,
+    topEnvironmentContributors: aggregateWeightContributors(result.heuristicWeights, (entry) => entry.environmentWeights),
+    topBehaviorContributors: aggregateWeightContributors(result.heuristicWeights, (entry) => entry.behaviorWeights)
+  };
+}
+
+function printCaseEvaluation(evaluation: CaseEvaluation, index: number, total: number): void {
+  const { testCase, result } = evaluation;
+
+  divider(`${index + 1}. ${testCase.title} (${testCase.id})`);
+  console.log(`Case ${index + 1} of ${total}`);
+  console.log(`Confidence Score: ${result.confidenceScore}`);
+  console.log(`Detected Scene: ${result.sceneProfile.profile.label}`);
+  console.log(`Top Directions: ${formatDirections(result).join(" | ")}`);
+  console.log(`Top 5 Search Priority: ${result.searchPriority.slice(0, 5).map((entry) => entry.label).join(" -> ")}`);
+  console.log(`Top Environment Contributors: ${evaluation.topEnvironmentContributors.join(", ") || "none"}`);
+  console.log(`Top Behavior Contributors: ${evaluation.topBehaviorContributors.join(", ") || "none"}`);
+  console.log(
+    `Priority Hit: ${evaluation.matchedPriorityTerms.length}/${testCase.expected.mustIncludePriorityTerms.length}`
+  );
+  console.log(`Forbidden Hit: ${evaluation.forbiddenPriorityTerms.length}`);
+  console.log(`Signal Hit: ${evaluation.matchedSignals.length}/${testCase.expected.mustIncludeSignals.length}`);
+  console.log(
+    `Heuristic Summary: raw=${RAW_HEURISTIC_COUNT}, normalized=${result.heuristicWeights.length}, direction=${aggregateDirectionContributors(result.heuristicWeights).join(", ") || "none"}`
+  );
+  console.log(
+    `Matched Priority Terms: ${evaluation.matchedPriorityTerms.length > 0 ? evaluation.matchedPriorityTerms.join(", ") : "none"}`
+  );
+  console.log(`Matched Signals: ${evaluation.matchedSignals.length > 0 ? evaluation.matchedSignals.join(", ") : "none"}`);
+
+  if (evaluation.passed) {
+    console.log("Result: PASS");
+    return;
+  }
+
+  console.log("Result: FAIL");
+  evaluation.reasons.forEach((reason) => console.log(`- ${reason}`));
+}
+
+function printSummary(evaluations: CaseEvaluation[]): void {
+  const passed = evaluations.filter((entry) => entry.passed);
+  const failed = evaluations.filter((entry) => !entry.passed);
+  const scenePasses = evaluations.filter((entry) =>
+    includesNormalized(entry.result.sceneProfile.profile.label, entry.testCase.expected.scene)
+  ).length;
+  const totalPriorityTerms = evaluations.reduce(
+    (total, entry) => total + entry.testCase.expected.mustIncludePriorityTerms.length,
+    0
+  );
+  const matchedPriorityTerms = evaluations.reduce((total, entry) => total + entry.matchedPriorityTerms.length, 0);
+  const totalSignalTerms = evaluations.reduce((total, entry) => total + entry.testCase.expected.mustIncludeSignals.length, 0);
+  const matchedSignals = evaluations.reduce((total, entry) => total + entry.matchedSignals.length, 0);
+  const averagePriorityHitRate = totalPriorityTerms > 0 ? (matchedPriorityTerms / totalPriorityTerms) * 100 : 0;
+  const averageSignalHitRate = totalSignalTerms > 0 ? (matchedSignals / totalSignalTerms) * 100 : 0;
+  const failedReasonCounts = failed.reduce<Record<string, number>>((accumulator, entry) => {
+    entry.reasons.forEach((reason) => {
+      accumulator[reason] = (accumulator[reason] ?? 0) + 1;
+    });
+    return accumulator;
+  }, {});
+  const topFailedReasons = Object.entries(failedReasonCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([reason, count]) => `${count}x ${reason}`);
+
+  divider("Evaluation Summary");
+  console.log(`Total cases: ${evaluations.length}`);
+  console.log(`Passed: ${passed.length}`);
+  console.log(`Failed: ${failed.length}`);
+  console.log(`Scene Accuracy: ${scenePasses}/${evaluations.length} = ${round((scenePasses / evaluations.length) * 100)}%`);
+  console.log(`Average Priority Hit Rate: ${matchedPriorityTerms}/${totalPriorityTerms} = ${round(averagePriorityHitRate)}%`);
+  console.log(`Average Signal Hit Rate: ${matchedSignals}/${totalSignalTerms} = ${round(averageSignalHitRate)}%`);
+  console.log(`Failed case ids: ${failed.length > 0 ? failed.map((entry) => entry.testCase.id).join(", ") : "none"}`);
+
+  if (failed.length === 0) {
+    console.log("All cases passed the current V3 engine checks.");
+    console.log("Top failed reasons: none");
+    printBreakdowns(evaluations);
+    return;
+  }
+
+  console.log(`Top failed reasons: ${topFailedReasons.join(" | ") || "none"}`);
+  console.log("\nFailure Reasons");
+  failed.forEach((entry) => {
+    console.log(`${entry.testCase.id}: ${entry.reasons.join(" | ")}`);
+  });
+  printBreakdowns(evaluations);
+}
+
+function buildBreakdownRows(
+  evaluations: CaseEvaluation[],
+  keySelector: (evaluation: CaseEvaluation) => string
+): BreakdownRow[] {
+  const grouped = evaluations.reduce<Record<string, BreakdownRow>>((accumulator, evaluation) => {
+    const key = keySelector(evaluation);
+
+    if (!accumulator[key]) {
+      accumulator[key] = {
+        key,
+        caseCount: 0,
+        scenePasses: 0,
+        totalPriorityTerms: 0,
+        matchedPriorityTerms: 0,
+        totalSignalTerms: 0,
+        matchedSignals: 0,
+        failedCaseIds: []
+      };
+    }
+
+    const row = accumulator[key];
+    row.caseCount += 1;
+    row.totalPriorityTerms += evaluation.testCase.expected.mustIncludePriorityTerms.length;
+    row.matchedPriorityTerms += evaluation.matchedPriorityTerms.length;
+    row.totalSignalTerms += evaluation.testCase.expected.mustIncludeSignals.length;
+    row.matchedSignals += evaluation.matchedSignals.length;
+
+    if (includesNormalized(evaluation.result.sceneProfile.profile.label, evaluation.testCase.expected.scene)) {
+      row.scenePasses += 1;
+    }
+
+    if (!evaluation.passed) {
+      row.failedCaseIds.push(evaluation.testCase.id);
+    }
+
+    return accumulator;
+  }, {});
+
+  return Object.values(grouped).sort((left, right) => {
+    const leftPriorityRate = left.totalPriorityTerms > 0 ? left.matchedPriorityTerms / left.totalPriorityTerms : 0;
+    const rightPriorityRate = right.totalPriorityTerms > 0 ? right.matchedPriorityTerms / right.totalPriorityTerms : 0;
+
+    if (leftPriorityRate !== rightPriorityRate) {
+      return leftPriorityRate - rightPriorityRate;
+    }
+
+    return left.key.localeCompare(right.key);
+  });
+}
+
+function printSceneBreakdown(rows: BreakdownRow[]): void {
+  divider("Per-Scene Breakdown");
+
+  rows.forEach((row) => {
+    const sceneAccuracy = row.caseCount > 0 ? round((row.scenePasses / row.caseCount) * 100) : 0;
+    const priorityRate = row.totalPriorityTerms > 0 ? round((row.matchedPriorityTerms / row.totalPriorityTerms) * 100) : 0;
+    const signalRate = row.totalSignalTerms > 0 ? round((row.matchedSignals / row.totalSignalTerms) * 100) : 0;
+
+    console.log(`Scene: ${row.key}`);
+    console.log(`Cases: ${row.caseCount}`);
+    console.log(`Scene Accuracy: ${row.scenePasses}/${row.caseCount} = ${sceneAccuracy}%`);
+    console.log(`Priority Hit Rate: ${row.matchedPriorityTerms}/${row.totalPriorityTerms} = ${priorityRate}%`);
+    console.log(`Signal Hit Rate: ${row.matchedSignals}/${row.totalSignalTerms} = ${signalRate}%`);
+    console.log(`Failed case ids: ${row.failedCaseIds.length > 0 ? row.failedCaseIds.join(", ") : "none"}`);
+    console.log("");
+  });
+}
+
+function printItemBreakdown(rows: BreakdownRow[]): void {
+  divider("Per-Item Breakdown");
+
+  rows.forEach((row) => {
+    const priorityRate = row.totalPriorityTerms > 0 ? round((row.matchedPriorityTerms / row.totalPriorityTerms) * 100) : 0;
+    const signalRate = row.totalSignalTerms > 0 ? round((row.matchedSignals / row.totalSignalTerms) * 100) : 0;
+
+    console.log(`Item: ${row.key}`);
+    console.log(`Cases: ${row.caseCount}`);
+    console.log(`Priority Hit Rate: ${row.matchedPriorityTerms}/${row.totalPriorityTerms} = ${priorityRate}%`);
+    console.log(`Signal Hit Rate: ${row.matchedSignals}/${row.totalSignalTerms} = ${signalRate}%`);
+    console.log(`Failed case ids: ${row.failedCaseIds.length > 0 ? row.failedCaseIds.join(", ") : "none"}`);
+    console.log("");
+  });
+}
+
+function printBreakdowns(evaluations: CaseEvaluation[]): void {
+  const sceneRows = buildBreakdownRows(evaluations, (evaluation) => evaluation.testCase.expected.scene);
+  const itemRows = buildBreakdownRows(evaluations, (evaluation) => evaluation.testCase.input.item);
+
+  printSceneBreakdown(sceneRows);
+  printItemBreakdown(itemRows);
 }
 
 function main(): void {
-  divider("WhereWasIt.ai Local Engine Evaluation");
-  console.log(`Scenario count: ${scenarios.length}`);
-  console.log("OpenRouter is not used in this script.");
+  const testCases = loadCases();
 
-  scenarios.forEach((scenario, index) => {
-    const analysis = analyzeClues(scenario.input);
+  divider("WhereWasIt.ai V3 Engine Case Library Evaluation");
+  console.log(`Scenario count: ${testCases.length}`);
+  console.log("GPT is not used in this script.");
+  console.log("This script evaluates only runInvestigationEngine(input) against the local case library.");
 
-    divider(`${index + 1}. ${scenario.name}`);
-    console.log("Input:");
-    console.log(scenario.input);
-
-    printJson("Extracted fields", {
-      itemType: analysis.input.itemType,
-      itemCategory: analysis.itemCategory,
-      lastSeenLocation: analysis.input.lastSeenLocation,
-      lastSeenTime: analysis.input.lastSeenTime,
-      placesVisited: analysis.input.placesVisited,
-      emotionalContext: analysis.input.emotionalContext
-    });
-
-    printJson("Memory engine", {
-      timeGapLabel: analysis.memory.timeGapLabel,
-      transitionMoments: analysis.memory.transitionMoments,
-      handoffRisk: analysis.memory.handoffRisk,
-      topCandidates: [...analysis.memory.candidates]
-        .sort((a, b) => b.weight - a.weight)
-        .slice(0, 5)
-    });
-
-    printJson(
-      "Behavior engine",
-      [...analysis.behavior]
-        .sort((a, b) => b.weight - a.weight)
-        .slice(0, 5)
-        .map((entry) => ({
-          location: entry.location,
-          weight: entry.weight,
-          reason: entry.reason,
-          hiddenSpots: entry.hiddenSpots
-        }))
-    );
-
-    printJson("Wisdom engine", {
-      signal: analysis.wisdom.signal,
-      directionHint: analysis.wisdom.directionHint,
-      cues: analysis.wisdom.cues,
-      topCandidates: [...analysis.wisdom.candidates]
-        .sort((a, b) => b.weight - a.weight)
-        .slice(0, 5)
-    });
-
-    printJson(
-      "Final ranked locations",
-      analysis.probabilities.map((entry) => ({
-        location: entry.location,
-        score: entry.score,
-        memoryScore: entry.memoryScore,
-        behaviorScore: entry.behaviorScore,
-        wisdomScore: entry.wisdomScore,
-        topReason: entry.reasons[0],
-        hiddenSpots: entry.hiddenSpots.slice(0, 4)
-      }))
-    );
-
-    printJson("Search planner output", analysis.searchPlan);
+  const evaluations = testCases.map(evaluateCase);
+  evaluations.forEach((evaluation, index) => {
+    printCaseEvaluation(evaluation, index, evaluations.length);
   });
+  printSummary(evaluations);
 }
 
 main();

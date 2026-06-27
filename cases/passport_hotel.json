@@ -1,0 +1,17 @@
+{
+  "id": "passport_hotel",
+  "title": "Passport lost at Hotel before checkout",
+  "input": {
+    "item": "Passport / Documents",
+    "place": "Hotel",
+    "time": "Morning",
+    "date": "Today",
+    "story": "I packed my luggage before checkout, checked my passport, left the room, and got into a taxi."
+  },
+  "expected": {
+    "scene": "Hotel",
+    "mustIncludePriorityTerms": ["document sleeve", "passport holder", "suitcase"],
+    "mustIncludeSignals": ["documentZone", "containerZone", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["couch cushions", "gym bag", "shower shelf"]
+  }
+}

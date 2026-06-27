@@ -1,0 +1,17 @@
+{
+  "id": "glasses_restaurant",
+  "title": "Glasses lost at Restaurant after dinner",
+  "input": {
+    "item": "Glasses",
+    "place": "Restaurant",
+    "time": "Evening",
+    "date": "Today",
+    "story": "I took off my glasses at the restaurant table, set them down while eating, moved to leave, and then realized they were missing."
+  },
+  "expected": {
+    "scene": "Restaurant",
+    "mustIncludePriorityTerms": ["dining table", "chair gap", "booth seat", "under menu", "coat area"],
+    "mustIncludeSignals": ["hiddenCorner", "containerZone", "transitionPath"],
+    "mustNotIncludePriorityTerms": ["locker", "passport holder", "shower shelf"]
+  }
+}

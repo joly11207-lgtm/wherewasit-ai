@@ -1,0 +1,17 @@
+{
+  "id": "laptop_airport",
+  "title": "Laptop lost at Airport after security",
+  "input": {
+    "item": "Laptop / Bag",
+    "place": "Airport",
+    "time": "Morning",
+    "date": "Today",
+    "story": "I took my laptop out at airport security, put it back into my backpack, waited at the gate, and then realized it was missing."
+  },
+  "expected": {
+    "scene": "Travel",
+    "mustIncludePriorityTerms": ["backpack", "airport security tray", "bag lining"],
+    "mustIncludeSignals": ["containerZone", "transitionPath", "hiddenCorner"],
+    "mustNotIncludePriorityTerms": ["couch cushions", "laundry basket", "shower shelf"]
+  }
+}

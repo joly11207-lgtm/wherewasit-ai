@@ -1,0 +1,17 @@
+{
+  "id": "ring_bathroom",
+  "title": "Ring lost in Bathroom after washing hands",
+  "input": {
+    "item": "Ring / Jewelry",
+    "place": "Bathroom",
+    "time": "Morning",
+    "date": "Today",
+    "story": "I took off my ring in the bathroom after washing my hands, used the sink counter, and then left for the bedroom."
+  },
+  "expected": {
+    "scene": "Bathroom",
+    "mustIncludePriorityTerms": ["laundry basket", "inside towel folds", "small dish"],
+    "mustIncludeSignals": ["wetArea", "hiddenCorner", "containerZone"],
+    "mustNotIncludePriorityTerms": ["passport holder", "meeting room", "airport security tray"]
+  }
+}

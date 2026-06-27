@@ -24,6 +24,8 @@ Do:
 - include item-specific coaching such as charging areas for earbuds, checkout counters for wallets, sink or laundry zones for rings, travel sleeves for passports, and couch cushions or bedside tables for glasses
 - when the item is a ring, jewelry, passport, or wallet, sound a little more reassuring and steady
 - end every report with one short encouraging sentence
+- follow the engine searchPriority as the source of truth for the primary search zones and their order
+- keep Hidden Spots To Check anchored to the engine environmental clues
 
 Do not:
 - return JSON
@@ -85,182 +87,79 @@ function safeParseJson(content: string): unknown {
   }
 }
 
-function getItemCoachNotes(analysis: LocalAnalysis): {
-  specificPlaces: string[];
-  recoveryPattern: string;
-  toneInstruction: string;
-  reassuranceLine: string;
-  encouragingClose: string;
-} {
-  const category = analysis.itemCategory;
-  const itemName = analysis.input.itemType;
+function sentenceList(values: string[], limit: number): string {
+  const items = values.map((value) => value.trim()).filter(Boolean).slice(0, limit);
 
-  switch (category) {
-    case "audio":
-      return {
-        specificPlaces: ["charging areas", "bedding", "hoodie pockets", "work bags", "seat gaps"],
-        recoveryPattern: `Many recovered ${itemName} are found much closer to the last everyday routine than expected, especially near charging spots, fabric, or the pocket used during the next transition.`,
-        toneInstruction:
-          "Keep the tone calm and grounded, with practical attention to small covered spaces.",
-        reassuranceLine:
-          "Slow the search down and give the close-in spots one careful pass before assuming they traveled farther.",
-        encouragingClose: "Many items turn up closer than expected."
-      };
-    case "wallet":
-      return {
-        specificPlaces: ["checkout counters", "jacket pockets", "car console", "grocery bags", "entry tables"],
-        recoveryPattern:
-          "A common recovery pattern for wallets is that they stay with the last carry spot or get set down during unloading after an errand.",
-        toneInstruction:
-          "Use a steadier, more reassuring tone because losing a wallet can feel urgent.",
-        reassuranceLine:
-          "If this is starting to feel urgent, keep the search methodical and stay with the first two locations before widening out.",
-        encouragingClose: "Take one careful pass before assuming it is gone."
-      };
-    case "jewelry":
-      return {
-        specificPlaces: ["sink edges", "bathroom counters", "laundry baskets", "dresser tops", "towel folds"],
-        recoveryPattern:
-          "In similar cases, jewelry is often recovered near washing, changing clothes, or fabric piles rather than far from home.",
-        toneInstruction:
-          "Use a gentle, reassuring tone because the item may be sentimental.",
-        reassuranceLine:
-          "Take this part slowly because sentimental items are often found in a quiet, ordinary spot rather than a dramatic one.",
-        encouragingClose: "Most recoveries happen during a calm second search."
-      };
-    case "documents":
-      return {
-        specificPlaces: ["travel bags", "document sleeves", "desk drawers", "paper stacks", "jacket pockets"],
-        recoveryPattern:
-          "A common recovery pattern for passports and documents is that they end up inside another travel layer or under a flat paper stack.",
-        toneInstruction:
-          "Use a more reassuring tone because missing travel documents can raise stress quickly.",
-        reassuranceLine:
-          "If your nerves are rising, pause and search the flat paper areas and travel layers slowly before jumping to the worst conclusion.",
-        encouragingClose: "A steady second pass often finds what the first one missed."
-      };
-    case "glasses":
-      return {
-        specificPlaces: ["couch cushions", "bedside tables", "blankets", "dresser corners", "soft cases"],
-        recoveryPattern:
-          "In similar cases, glasses are often recovered at sitting height, tucked into soft surfaces, or left near the last place someone settled down.",
-        toneInstruction:
-          "Keep the tone calm and matter-of-fact, with extra focus on soft surfaces and rest spots.",
-        reassuranceLine:
-          "Search at sitting height first because glasses often disappear into the spaces people relax in.",
-        encouragingClose: "Most recoveries happen once the search slows down."
-      };
-    case "phone":
-      return {
-        specificPlaces: ["couch cushions", "bedside tables", "blankets", "bathroom ledges", "bag pockets"],
-        recoveryPattern:
-          "A common recovery pattern for phones is that they slip into soft surfaces or land on the nearest flat edge during multitasking.",
-        toneInstruction:
-          "Keep the tone steady and practical, with attention to soft surfaces and handoff points.",
-        reassuranceLine:
-          "Start with the close, soft surfaces before treating this like a wider travel search.",
-        encouragingClose: "Take one slow pass before widening the search."
-      };
-    default:
-      return {
-        specificPlaces: ["nearby surfaces", "carry spots", "fabric folds", "drawer edges", "bag compartments"],
-        recoveryPattern: `In similar cases, ${itemName.toLowerCase()} often turns up near the last routine pause or inside the next place it was carried.`,
-        toneInstruction: "Keep the tone warm, practical, and steady.",
-        reassuranceLine:
-          "A calm second pass usually works better than a fast wide search.",
-        encouragingClose: "Many items are found on a careful second look."
-      };
+  if (items.length === 0) {
+    return "";
   }
+  if (items.length === 1) {
+    return items[0];
+  }
+  if (items.length === 2) {
+    return `${items[0]} and ${items[1]}`;
+  }
+
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
-function itemVerb(itemType: string): "is" | "are" {
-  const value = itemType.toLowerCase();
-  return /airpods|earbuds|headphones|glasses|keys|documents/.test(value) ? "are" : "is";
+function buildFallbackSections(analysis: LocalAnalysis): ReportSections {
+  const engine = analysis.investigationEngine;
+  const mapped = analysis.searchPlan;
+  const topPriority = engine.searchPriority[0];
+  const topDirection = engine.topDirections[0]?.direction;
+  const secondDirection = engine.topDirections[1]?.direction;
+  const missingMoments = engine.missingMoments
+    .slice(0, 3)
+    .map((moment) => moment.replace(/^The item may have been released during /i, "").replace(/\.$/, ""));
+  const directionTags = engine.topDirections
+    .flatMap((entry) => entry.tags)
+    .filter((tag, index, array) => array.indexOf(tag) === index)
+    .slice(0, 4);
+  const environmentalPattern = [...directionTags, ...engine.environmentalClues]
+    .filter((value, index, array) => array.indexOf(value) === index)
+    .slice(0, 4);
+
+  return {
+    mostLikelyArea: topPriority
+      ? `Start with ${topPriority.label}. This is the strongest zone because it connects your timeline, the object behavior, and the highest spatial signal: ${topDirection ?? "the first directional pattern"}.`
+      : mapped.mostLikelyArea,
+    prioritySearchOrder: mapped.prioritySearchOrder,
+    hiddenSpots: mapped.hiddenSpots,
+    whyThisMakesSense: mapped.whyThisMakesSense,
+    wisdomSignal:
+      mapped.wisdomSignal ||
+      `Spatial signal: ${sentenceList([topDirection, secondDirection].filter(Boolean) as string[], 2) || "the strongest nearby zones"}. Environmental pattern: ${sentenceList(environmentalPattern, 4) || "the clearest scene clues"}. Focus on these as search zones, not as certainty.`,
+    ifNotFound: `If the first pass misses it, stay with this 15-minute calm search protocol: ${engine.calmSearchPlan.join(" ")}`
+  };
 }
 
 function buildFallbackReport(
   analysis: LocalAnalysis,
   diagnostics?: NarrationResult["diagnostics"]
 ): NarrationResult {
-  const topArea = analysis.searchPlan.searchSteps[0]?.area ?? analysis.searchPlan.mostLikelyArea;
-  const secondArea = analysis.searchPlan.searchSteps[1]?.area;
-  const coachNotes = getItemCoachNotes(analysis);
-
   return {
     diagnostics,
     usedFallback: true,
-    report: {
-      mostLikelyArea: `Your ${analysis.input.itemType.toLowerCase()} ${itemVerb(analysis.input.itemType)} most likely still near ${topArea.toLowerCase()}.`,
-      prioritySearchOrder: analysis.searchPlan.searchSteps.slice(0, 5).map((step, index) => {
-        const lead =
-          index === 0
-            ? `Start with ${step.area.toLowerCase()}`
-            : index === 1
-              ? `Then move to ${step.area.toLowerCase()}`
-              : `After that, check ${step.area.toLowerCase()}`;
-
-        return `${lead} because ${step.reason.toLowerCase()} ${index === 0 ? "This is a common recovery zone when the first memory is still close to the item." : step.instruction}`;
-      }),
-      hiddenSpots: analysis.searchPlan.hiddenSpots.slice(0, 6),
-      wisdomSignal: `${analysis.wisdom.signal} One intuitive signal suggests looking in a partly covered place such as ${coachNotes.specificPlaces
-        .slice(0, 2)
-        .join(" or ")} before assuming the item moved farther away.`,
-      whyThisMakesSense: [
-        `The search pattern circles back to ${analysis.input.lastSeenLocation}, then widens toward ${secondArea ? secondArea.toLowerCase() : "the next natural handoff point"} only after the close-in spots are covered.`,
-        coachNotes.recoveryPattern,
-        `Signals suggest paying attention to ${coachNotes.specificPlaces
-          .slice(0, 3)
-          .join(", ")} because those are the kinds of places where this item often slips out of notice.`
-      ].join(" "),
-      ifNotFound: `${coachNotes.reassuranceLine} Retrace your steps once more through the first two areas, then check ${coachNotes.specificPlaces
-        .slice(0, 3)
-        .join(", ")} before widening the search. ${coachNotes.encouragingClose}`
-    }
+    report: buildFallbackSections(analysis)
   };
 }
 
 function buildNarratorPayload(analysis: LocalAnalysis): string {
-  const coachNotes = getItemCoachNotes(analysis);
+  return analysis.investigationEngine.promptContext;
+}
 
-  return JSON.stringify(
-    {
-      item: analysis.input.itemType,
-      lastSeenLocation: analysis.input.lastSeenLocation,
-      lastSeenTime: analysis.input.lastSeenTime,
-      placesVisited: analysis.input.placesVisited,
-      emotionalContext: analysis.input.emotionalContext,
-      topLikelyAreas: analysis.probabilities.slice(0, 5).map((entry) => ({
-        area: entry.location,
-        whyItRanksHighly: entry.reasons[0],
-        hiddenSpots: entry.hiddenSpots.slice(0, 4)
-      })),
-      searchOrder: analysis.searchPlan.searchSteps.slice(0, 5).map((step, index) => ({
-        step: index + 1,
-        area: step.area,
-        instruction: step.instruction,
-        reason: step.reason
-      })),
-      intuitiveSignals: {
-        wisdomSignal: analysis.wisdom.signal,
-        directionHint: analysis.wisdom.directionHint,
-        cues: analysis.wisdom.cues
-      },
-      itemSpecificCoaching: {
-        likelyPlacesToWorkIntoTheNarration: coachNotes.specificPlaces,
-        recoveryPatternLanguage: coachNotes.recoveryPattern,
-        reassuranceTone: coachNotes.toneInstruction,
-        encouragingClose: coachNotes.encouragingClose
-      },
-      searchCoachNotes: {
-        handoffRisk: analysis.memory.handoffRisk,
-        transitionMoments: analysis.memory.transitionMoments,
-        reminder:
-          "Do not sound like a report generator. Sound like a trusted search coach guiding one careful search pass."
-      }
-    },
-    null,
-    2
-  );
+function enforceEngineReport(analysis: LocalAnalysis, report: ReportSections): ReportSections {
+  const engineReport = analysis.searchPlan;
+
+  return {
+    mostLikelyArea: engineReport.mostLikelyArea,
+    prioritySearchOrder: engineReport.prioritySearchOrder,
+    hiddenSpots: engineReport.hiddenSpots,
+    wisdomSignal: engineReport.wisdomSignal,
+    whyThisMakesSense: engineReport.whyThisMakesSense,
+    ifNotFound: engineReport.ifNotFound
+  };
 }
 
 function extractSection(markdown: string, heading: string): string {
@@ -436,7 +335,7 @@ export async function narrateWithModel(
         debugResponse: DEBUG_OPENROUTER ? parsedResponse ?? rawText : undefined
       },
       usedFallback: false,
-      report: parsed
+      report: enforceEngineReport(analysis, parsed)
     };
   } catch (error) {
     return buildFallbackReport(analysis, {

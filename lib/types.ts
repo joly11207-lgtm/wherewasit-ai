@@ -1,3 +1,5 @@
+import type { InvestigationEngineResult } from "@/lib/engine/types";
+
 export type ExtractedInput = {
   itemType: string;
   lastSeenLocation: string;
@@ -115,6 +117,7 @@ export type LocalAnalysis = {
   input: ExtractedInput;
   itemCategory: ItemCategory;
   timeHints: TimeHints;
+  investigationEngine: InvestigationEngineResult;
   memory: MemoryResult;
   behavior: BehaviorPattern[];
   wisdom: WisdomResult;
