@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { runInvestigationEngine } from "../lib/engine";
 import { RAW_HEURISTIC_COUNT } from "../lib/engine/heuristics";
-import { Direction, EngineInput, HeuristicWeights, InvestigationEngineResult } from "../lib/engine/types";
+import { Direction, EngineInput, HeuristicWeights, InvestigationEngineResult, KnowledgeReading } from "../lib/engine/types";
 
 type EngineCase = {
   id: string;
@@ -124,6 +124,43 @@ function printHeuristicAttribution(heuristics: HeuristicWeights[]): void {
   });
 }
 
+function findReading(heuristics: HeuristicWeights[], source: string): KnowledgeReading | undefined {
+  return heuristics.find((heuristic) => heuristic.source === source)?.reading;
+}
+
+function formatReadingList(values: string[] | Direction[]): string {
+  return values.length > 0 ? values.join(", ") : "none";
+}
+
+function printKnowledgeReadingDebug(heuristics: HeuristicWeights[]): void {
+  const liurenReading = findReading(heuristics, "liuren");
+  const lostSongReading = findReading(heuristics, "lostSong");
+
+  console.log("Knowledge Reading Debug:");
+
+  if (liurenReading) {
+    console.log(`- liuren resultKey: ${liurenReading.resultKey}`);
+    console.log(`  directions: ${formatReadingList(liurenReading.directions)}`);
+    console.log(`  environments: ${formatReadingList(liurenReading.environments)}`);
+    console.log(
+      `  height / distance / movement: ${liurenReading.height} / ${liurenReading.distance} / ${liurenReading.movement}`
+    );
+  } else {
+    console.log("- liuren: none");
+  }
+
+  if (lostSongReading) {
+    console.log(`- lostSong resultKey: ${lostSongReading.resultKey}`);
+    console.log(`  directions: ${formatReadingList(lostSongReading.directions)}`);
+    console.log(`  environments: ${formatReadingList(lostSongReading.environments)}`);
+    console.log(
+      `  height / distance / movement: ${lostSongReading.height} / ${lostSongReading.distance} / ${lostSongReading.movement}`
+    );
+  } else {
+    console.log("- lostSong: none");
+  }
+}
+
 function extractContributorKeys(entries: string[]): string[] {
   return entries.map((entry) => entry.split(":")[0]?.trim()).filter(Boolean);
 }
@@ -218,6 +255,7 @@ function printCaseEvaluation(evaluation: CaseEvaluation, index: number, total: n
   console.log(
     `Heuristic Summary: raw=${RAW_HEURISTIC_COUNT}, normalized=${result.heuristicWeights.length}, direction=${aggregateDirectionContributors(result.heuristicWeights).join(", ") || "none"}`
   );
+  printKnowledgeReadingDebug(result.heuristicWeights);
   printHeuristicAttribution(result.heuristicWeights);
   console.log(
     `Matched Priority Terms: ${evaluation.matchedPriorityTerms.length > 0 ? evaluation.matchedPriorityTerms.join(", ") : "none"}`
@@ -269,7 +307,7 @@ function printSummary(evaluations: CaseEvaluation[]): void {
   console.log(`Failed case ids: ${failed.length > 0 ? failed.map((entry) => entry.testCase.id).join(", ") : "none"}`);
 
   if (failed.length === 0) {
-    console.log("All cases passed the current V3 engine checks.");
+    console.log("All cases completed under the current V1 knowledge-engine checks.");
     console.log("Top failed reasons: none");
     printBreakdowns(evaluations);
     return;
@@ -453,7 +491,7 @@ function printBreakdowns(evaluations: CaseEvaluation[]): void {
 function main(): void {
   const testCases = loadCases();
 
-  divider("WhereWasIt.ai V3 Engine Case Library Evaluation");
+  divider("WhereWasIt.ai V1 Knowledge Engine Evaluation");
   console.log(`Scenario count: ${testCases.length}`);
   console.log("GPT is not used in this script.");
   console.log("This script evaluates only runInvestigationEngine(input) against the local case library.");

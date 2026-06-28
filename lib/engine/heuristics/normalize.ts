@@ -49,6 +49,7 @@ export function normalizeHeuristicWeights(rawWeights: HeuristicWeights[]): Heuri
     environmentWeights: normalizeMap(heuristic.environmentWeights, ENVIRONMENT_ITEM_CAP, ENVIRONMENT_TOTAL_CAP),
     behaviorWeights: normalizeMap(heuristic.behaviorWeights, BEHAVIOR_ITEM_CAP, BEHAVIOR_TOTAL_CAP),
     confidence: round(clamp(heuristic.confidence, MIN_CONFIDENCE, MAX_CONFIDENCE)),
-    reasonTags: heuristic.reasonTags.filter((tag, index) => heuristic.reasonTags.indexOf(tag) === index).slice(0, 6)
+    reasonTags: heuristic.reasonTags.filter((tag, index) => heuristic.reasonTags.indexOf(tag) === index).slice(0, 6),
+    reading: heuristic.reading
   }));
 }

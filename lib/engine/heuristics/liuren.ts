@@ -1,119 +1,154 @@
-import { Direction, HeuristicWeights } from "@/lib/engine/types";
+import { Direction, HeuristicWeights, KnowledgeReading } from "@/lib/engine/types";
 import { HeuristicContext } from "@/lib/engine/heuristics/types";
 import {
   buildDeterministicSeed,
   hasAnyPhrase,
   parseDateSeed,
+  readingToHeuristicWeights,
   resolveTimeBucket,
-  timeBucketIndex,
   TimeBucket
 } from "@/lib/engine/heuristics/utils";
 
-type PalaceProfile = {
-  key: "great_stability" | "lingering" | "swift_joy" | "red_mouth" | "small_fortune" | "void_loss";
-  directions: [Direction, Direction, Direction];
-  environmentWeights: Record<string, number>;
-  behaviorWeights: Record<string, number>;
-  reasonTags: string[];
+type LiurenKey = "da_an" | "liu_lian" | "su_xi" | "chi_kou" | "xiao_ji" | "kong_wang";
+
+type LiurenProfile = {
+  resultKey: LiurenKey;
+  directions: Direction[];
+  environments: string[];
+  colors: string[];
+  height: KnowledgeReading["height"];
+  distance: KnowledgeReading["distance"];
+  movement: KnowledgeReading["movement"];
+  containerHints: string[];
+  hiddenHints: string[];
+  behaviorHints: string[];
+  confidence: number;
 };
 
-const PALACE_PROFILES: PalaceProfile[] = [
+// V1 rule table for the six internal Liuren outcomes.
+// Source intent: digital translation of the PDF's lost-item Liuren workflow.
+//
+// Mapping notes used here for calibration:
+// - 大安 / da_an:
+//   direction -> East-led, steady indoor/familiar area
+//   environment -> wood, furniture, storage, original room
+//   height -> middle
+//   distance -> near
+//   movement -> still
+//   container/hidden -> drawer, bag pocket, beside furniture
+// - 留连 / liu_lian:
+//   direction -> North/West leaning, delayed recovery
+//   environment -> hidden corner, fabric, low surface
+//   height -> low
+//   distance -> middle
+//   movement -> uncertain
+//   container/hidden -> coat pocket, drawer edge, under folds
+// - 速喜 / su_xi:
+//   direction -> South/East leaning, visible or bright area
+//   environment -> bright surface, charging zone, entry surface
+//   height -> high
+//   distance -> near
+//   movement -> still
+//   container/hidden -> open tray, small open compartment, beside charger
+// - 赤口 / chi_kou:
+//   direction -> West/Northwest leaning, public/contact route
+//   environment -> public surface, vehicle, exit path
+//   height -> middle
+//   distance -> far
+//   movement -> moved
+//   container/hidden -> jacket pocket, car console, seat gap
+// - 小吉 / xiao_ji:
+//   direction -> Southeast/East leaning, recoverable nearby
+//   environment -> container area, familiar route, private indoor space
+//   height -> middle
+//   distance -> near
+//   movement -> still
+//   container/hidden -> bag pocket, hoodie pocket, nightstand drawer
+// - 空亡 / kong_wang:
+//   direction -> Northwest/West/North leaning, widened route search
+//   environment -> travel path, emptier surface, edge of search area
+//   height -> low
+//   distance -> far
+//   movement -> moved
+//   container/hidden -> luggage pocket, outer compartment, under seat
+const LIUREN_PROFILES: LiurenProfile[] = [
   {
-    key: "great_stability",
+    resultKey: "da_an",
     directions: ["East", "Southwest", "Northeast"],
-    environmentWeights: {
-      containerZone: 12,
-      storageArea: 10,
-      lowArea: 8,
-      hiddenCorner: 7,
-      warmArea: 6
-    },
-    behaviorWeights: {
-      placedTemporarily: 8,
-      automaticRoutine: 7,
-      contextShift: 5
-    },
-    reasonTags: ["stable", "nearby", "container", "known-place"]
+    environments: ["familiar indoor space", "wood or furniture", "storage area"],
+    colors: ["green", "earth yellow"],
+    height: "middle",
+    distance: "near",
+    movement: "still",
+    containerHints: ["drawer", "bag pocket", "near daily belongings"],
+    hiddenHints: ["beside furniture", "under a nearby object"],
+    behaviorHints: ["original area", "routine placement", "calm second pass"],
+    confidence: 0.78
   },
   {
-    key: "lingering",
-    directions: ["North", "Northeast", "West"],
-    environmentWeights: {
-      hiddenCorner: 12,
-      lowArea: 9,
-      containerZone: 8,
-      storageArea: 6
-    },
-    behaviorWeights: {
-      visualBlindness: 10,
-      forgotDuringTransition: 7,
-      contextShift: 7
-    },
-    reasonTags: ["delayed", "overlooked", "under-object", "blind-spot"]
+    resultKey: "liu_lian",
+    directions: ["North", "West", "Northeast"],
+    environments: ["hidden corner", "fabric area", "low surface"],
+    colors: ["charcoal", "deep blue"],
+    height: "low",
+    distance: "middle",
+    movement: "uncertain",
+    containerHints: ["coat pocket", "drawer edge"],
+    hiddenHints: ["under fabric", "behind nearby items", "folded area"],
+    behaviorHints: ["overlooked on the first pass", "delayed recovery", "visual blind spot"],
+    confidence: 0.7
   },
   {
-    key: "swift_joy",
+    resultKey: "su_xi",
     directions: ["South", "East", "Southeast"],
-    environmentWeights: {
-      highArea: 10,
-      electronicArea: 8,
-      entryZone: 6,
-      transitionPath: 6
-    },
-    behaviorWeights: {
-      placedTemporarily: 8,
-      routineInterruption: 6,
-      attentionSplit: 5
-    },
-    reasonTags: ["visible", "bright", "surface", "quick-recovery"]
+    environments: ["bright surface", "charging area", "entry surface"],
+    colors: ["gold", "red"],
+    height: "high",
+    distance: "near",
+    movement: "still",
+    containerHints: ["open tray", "small bag compartment"],
+    hiddenHints: ["visible clutter edge", "beside charger"],
+    behaviorHints: ["quick set-down", "short interruption", "easy to recover nearby"],
+    confidence: 0.74
   },
   {
-    key: "red_mouth",
+    resultKey: "chi_kou",
     directions: ["West", "Northwest", "South"],
-    environmentWeights: {
-      transitionPath: 12,
-      exitPath: 9,
-      entryZone: 7,
-      containerZone: 5
-    },
-    behaviorWeights: {
-      attentionSplit: 10,
-      routineInterruption: 8,
-      taskSwitching: 7
-    },
-    reasonTags: ["public-area", "people-contact", "interruption", "exit-route"]
+    environments: ["public contact area", "vehicle area", "exit route"],
+    colors: ["white", "red"],
+    height: "middle",
+    distance: "far",
+    movement: "moved",
+    containerHints: ["jacket pocket", "car console", "counter tray"],
+    hiddenHints: ["seat gap", "counter edge", "near shared surface"],
+    behaviorHints: ["attention split", "contact with other people", "transition between places"],
+    confidence: 0.68
   },
   {
-    key: "small_fortune",
+    resultKey: "xiao_ji",
     directions: ["Southeast", "East", "North"],
-    environmentWeights: {
-      containerZone: 11,
-      storageArea: 8,
-      transitionPath: 7,
-      hiddenCorner: 5
-    },
-    behaviorWeights: {
-      placedTemporarily: 9,
-      contextShift: 6,
-      automaticRoutine: 6
-    },
-    reasonTags: ["recoverable", "familiar-route", "bag-pocket", "short-distance"]
+    environments: ["container area", "familiar route", "private indoor space"],
+    colors: ["teal", "soft green"],
+    height: "middle",
+    distance: "near",
+    movement: "still",
+    containerHints: ["bag pocket", "hoodie pocket", "nightstand drawer"],
+    hiddenHints: ["under paper", "inside clothing folds"],
+    behaviorHints: ["recoverable nearby", "short route shift", "check carry layers"],
+    confidence: 0.76
   },
   {
-    key: "void_loss",
+    resultKey: "kong_wang",
     directions: ["Northwest", "West", "North"],
-    environmentWeights: {
-      hiddenCorner: 10,
-      lowArea: 8,
-      transitionPath: 7,
-      exitPath: 6
-    },
-    behaviorWeights: {
-      forgotDuringTransition: 8,
-      stateDependentMemory: 7,
-      contextShift: 7
-    },
-    reasonTags: ["uncertain", "displaced", "covered", "wider-area"]
+    environments: ["travel path", "empty surface", "wider search area"],
+    colors: ["gray", "black"],
+    height: "low",
+    distance: "far",
+    movement: "moved",
+    containerHints: ["luggage pocket", "door pocket", "outer compartment"],
+    hiddenHints: ["under seat", "behind larger items", "floor edge"],
+    behaviorHints: ["displaced during transition", "widen search calmly", "check the last route out"],
+    confidence: 0.64
   }
 ];
 
@@ -126,82 +161,94 @@ const TIME_OFFSETS: Record<TimeBucket, number> = {
   late_night: 5
 };
 
-function addIf(condition: boolean, weights: Record<string, number>, key: string, amount: number): void {
-  if (!condition) return;
-  weights[key] = (weights[key] ?? 0) + amount;
+function uniqueList(values: string[]): string[] {
+  return values.filter((value, index) => Boolean(value) && values.indexOf(value) === index);
 }
 
-function addDirection(
-  weights: Partial<Record<Direction, number>>,
-  direction: Direction,
-  amount: number
-): void {
-  weights[direction] = (weights[direction] ?? 0) + amount;
-}
-
-export function liurenHeuristic(context: HeuristicContext): HeuristicWeights {
-  const { input, objectProfile, sceneProfile, timeline } = context;
+function createReading(context: HeuristicContext): KnowledgeReading {
+  const { input, objectProfile, sceneProfile } = context;
   const story = input.story.toLowerCase();
   const dateSeed = parseDateSeed(input.date);
   const bucket = resolveTimeBucket(input.time);
   const seed = buildDeterministicSeed(input);
-  const baseIndex = (dateSeed.total + TIME_OFFSETS[bucket] + seed) % PALACE_PROFILES.length;
-  const palace = PALACE_PROFILES[baseIndex];
-  const directionWeights: Partial<Record<Direction, number>> = {
-    [palace.directions[0]]: 12,
-    [palace.directions[1]]: 8,
-    [palace.directions[2]]: 5
-  };
-  const environmentWeights = { ...palace.environmentWeights };
-  const behaviorWeights = { ...palace.behaviorWeights };
-  const reasonTags = [...palace.reasonTags];
+  const profile = LIUREN_PROFILES[(dateSeed.total + TIME_OFFSETS[bucket] + seed) % LIUREN_PROFILES.length];
 
-  const isSmallItem = /airpods|earbuds|ring|jewelry|keys|glasses|camera/i.test(input.item);
-  const isDocumentItem = objectProfile.key === "documents";
-  const isPublicOrTravel = hasAnyPhrase(story, [
-    "airport",
-    "travel",
-    "gate",
-    "restaurant",
-    "cafe",
-    "hotel lobby",
-    "checkout",
-    "boarding"
-  ]);
-  const isWaterScene = (sceneProfile.profile.wetAreas?.length ?? 0) > 0 || hasAnyPhrase(story, ["sink", "shower", "water", "bathroom"]);
+  const environments = [...profile.environments];
+  const colors = [...profile.colors];
+  const containerHints = [...profile.containerHints];
+  const hiddenHints = [...profile.hiddenHints];
+  const behaviorHints = [...profile.behaviorHints];
+  const directions = [...profile.directions];
 
-  addIf(isSmallItem, environmentWeights, "hiddenCorner", 2);
-  addIf(isSmallItem, environmentWeights, "lowArea", 2);
-  addIf(isDocumentItem, environmentWeights, "documentZone", 8);
-  addIf(isDocumentItem, environmentWeights, "containerZone", 2);
-  addIf(isPublicOrTravel, environmentWeights, "transitionPath", 3);
-  addIf(isPublicOrTravel, environmentWeights, "exitPath", 2);
-  addIf(isPublicOrTravel, behaviorWeights, "attentionSplit", 2);
-  addIf(isPublicOrTravel, behaviorWeights, "routineInterruption", 2);
-  addIf(isWaterScene, environmentWeights, "wetArea", 6);
-  addIf(isWaterScene, behaviorWeights, "placedTemporarily", 2);
+  let height = profile.height;
+  let distance = profile.distance;
+  let movement = profile.movement;
+  let confidence = profile.confidence;
 
-  if (timeline.transitionPoints.length >= 2) {
-    behaviorWeights.forgotDuringTransition = (behaviorWeights.forgotDuringTransition ?? 0) + 2;
-    environmentWeights.transitionPath = (environmentWeights.transitionPath ?? 0) + 2;
+  if (objectProfile.key === "documents") {
+    environments.push("document storage", "desk papers");
+    containerHints.push("document sleeve", "passport holder");
+    hiddenHints.push("inside paper stack");
+    colors.push("navy");
+    confidence += 0.03;
   }
 
-  if (sceneProfile.key === "home" || sceneProfile.key === "bedroom" || sceneProfile.key === "living_room") {
-    addDirection(directionWeights, "East", 2);
-    environmentWeights.warmArea = (environmentWeights.warmArea ?? 0) + 2;
+  if (objectProfile.key === "jewelry") {
+    environments.push("water edge", "small personal surface");
+    containerHints.push("small dish", "drawer lip");
+    hiddenHints.push("towel folds", "near the drain edge");
+    colors.push("silver");
   }
 
-  if (sceneProfile.key === "car" || sceneProfile.key === "travel") {
-    addDirection(directionWeights, "West", 2);
-    environmentWeights.exitPath = (environmentWeights.exitPath ?? 0) + 2;
+  if (objectProfile.key === "audio" || objectProfile.key === "phone") {
+    environments.push("electronics area", "charging surface");
+    containerHints.push("hoodie pocket", "bag sleeve");
+    hiddenHints.push("between cushions", "near cable");
+    colors.push("black");
+  }
+
+  if (sceneProfile.key === "bathroom" || sceneProfile.key === "kitchen" || hasAnyPhrase(story, ["sink", "shower", "washing"])) {
+    environments.push("water area");
+    hiddenHints.push("behind toiletries", "sink edge");
+    distance = "near";
+    height = height === "high" ? "middle" : height;
+  }
+
+  if (sceneProfile.key === "car" || sceneProfile.key === "travel" || hasAnyPhrase(story, ["driving", "taxi", "rideshare", "airport", "checkout"])) {
+    environments.push("movement route");
+    containerHints.push("seat pocket", "center console");
+    hiddenHints.push("seat gap", "floor mat");
+    movement = "moved";
+    distance = "far";
+  }
+
+  if (sceneProfile.key === "bedroom" || sceneProfile.key === "home" || sceneProfile.key === "living_room") {
+    environments.push("familiar indoor space");
+    containerHints.push("drawer", "near daily belongings");
+    hiddenHints.push("under fabric layers");
+  }
+
+  if (!input.date || !input.time) {
+    confidence -= 0.06;
   }
 
   return {
-    source: "liuren",
-    directionWeights,
-    environmentWeights,
-    behaviorWeights,
-    confidence: input.date && input.time ? 0.76 : 0.64,
-    reasonTags: reasonTags.filter((tag, index, array) => array.indexOf(tag) === index).slice(0, 6)
+    method: "liuren",
+    resultKey: profile.resultKey,
+    directions,
+    environments: uniqueList(environments).slice(0, 6),
+    colors: uniqueList(colors).slice(0, 4),
+    height,
+    distance,
+    movement,
+    containerHints: uniqueList(containerHints).slice(0, 5),
+    hiddenHints: uniqueList(hiddenHints).slice(0, 5),
+    behaviorHints: uniqueList(behaviorHints).slice(0, 5),
+    confidence: Math.max(0.5, Math.min(0.84, Number(confidence.toFixed(2))))
   };
+}
+
+export function liurenHeuristic(context: HeuristicContext): HeuristicWeights {
+  const reading = createReading(context);
+  return readingToHeuristicWeights("liuren", reading);
 }

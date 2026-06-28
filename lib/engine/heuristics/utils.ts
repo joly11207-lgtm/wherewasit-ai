@@ -1,4 +1,12 @@
-import { Direction, EngineInput } from "@/lib/engine/types";
+import {
+  Direction,
+  DistanceBand,
+  EngineInput,
+  HeightBand,
+  HeuristicWeights,
+  KnowledgeReading,
+  MovementState
+} from "@/lib/engine/types";
 
 export type TimeBucket =
   | "early_morning"
@@ -99,3 +107,197 @@ export const CARDINAL_TO_DIRECTION: Record<string, Direction> = {
   west: "West",
   northwest: "Northwest"
 };
+
+function round(value: number): number {
+  return Number(value.toFixed(2));
+}
+
+function includesAny(value: string, terms: string[]): boolean {
+  const normalized = normalizeText(value);
+  return terms.some((term) => normalized.includes(normalizeText(term)));
+}
+
+function pushUnique(target: string[], values: string[], limit = 6): string[] {
+  values.forEach((value) => {
+    if (!value || target.includes(value) || target.length >= limit) {
+      return;
+    }
+
+    target.push(value);
+  });
+
+  return target;
+}
+
+export function readingToHeuristicWeights(source: string, reading: KnowledgeReading): HeuristicWeights {
+  const directionWeights: Partial<Record<Direction, number>> = {};
+  const environmentWeights: Record<string, number> = {};
+  const behaviorWeights: Record<string, number> = {};
+  const reasonTags: string[] = [];
+
+  reading.directions.slice(0, 3).forEach((direction, index) => {
+    directionWeights[direction] = index === 0 ? 12 : index === 1 ? 8 : 5;
+  });
+
+  const allEnvironmentHints = [
+    ...reading.environments,
+    ...reading.containerHints,
+    ...reading.hiddenHints,
+    ...reading.colors
+  ];
+
+  allEnvironmentHints.forEach((hint) => {
+    const normalized = normalizeText(hint);
+
+    if (includesAny(normalized, ["water", "sink", "drain", "bathroom", "shower", "wet"])) {
+      environmentWeights.wetArea = (environmentWeights.wetArea ?? 0) + 6;
+    }
+    if (includesAny(normalized, ["electronics", "charging", "light", "fire", "bright"])) {
+      environmentWeights.electronicArea = (environmentWeights.electronicArea ?? 0) + 5;
+      environmentWeights.highArea = (environmentWeights.highArea ?? 0) + 2;
+    }
+    if (includesAny(normalized, ["container", "drawer", "sleeve", "holder", "bag", "pocket", "case", "safe", "box"])) {
+      environmentWeights.containerZone = (environmentWeights.containerZone ?? 0) + 6;
+      environmentWeights.storageArea = (environmentWeights.storageArea ?? 0) + 4;
+    }
+    if (includesAny(normalized, ["hidden", "covered", "behind", "under", "corner", "fold"])) {
+      environmentWeights.hiddenCorner = (environmentWeights.hiddenCorner ?? 0) + 6;
+    }
+    if (includesAny(normalized, ["document", "paper", "passport", "receipt"])) {
+      environmentWeights.documentZone = (environmentWeights.documentZone ?? 0) + 6;
+    }
+    if (includesAny(normalized, ["public", "contact", "shared", "people"])) {
+      environmentWeights.transitionPath = (environmentWeights.transitionPath ?? 0) + 4;
+      environmentWeights.exitPath = (environmentWeights.exitPath ?? 0) + 3;
+    }
+    if (includesAny(normalized, ["wood", "furniture", "earth", "original place", "familiar"])) {
+      environmentWeights.warmArea = (environmentWeights.warmArea ?? 0) + 4;
+    }
+    if (includesAny(normalized, ["metal", "vehicle", "car"])) {
+      environmentWeights.storageArea = (environmentWeights.storageArea ?? 0) + 3;
+      environmentWeights.exitPath = (environmentWeights.exitPath ?? 0) + 2;
+    }
+    if (includesAny(normalized, ["fabric", "clothing", "towel", "blanket", "laundry", "coat"])) {
+      environmentWeights.containerZone = (environmentWeights.containerZone ?? 0) + 3;
+      environmentWeights.hiddenCorner = (environmentWeights.hiddenCorner ?? 0) + 2;
+      environmentWeights.warmArea = (environmentWeights.warmArea ?? 0) + 2;
+    }
+  });
+
+  if (reading.height === "high") {
+    environmentWeights.highArea = (environmentWeights.highArea ?? 0) + 6;
+  } else if (reading.height === "middle") {
+    environmentWeights.storageArea = (environmentWeights.storageArea ?? 0) + 2;
+  } else if (reading.height === "low") {
+    environmentWeights.lowArea = (environmentWeights.lowArea ?? 0) + 6;
+  }
+
+  if (reading.distance === "near") {
+    environmentWeights.containerZone = (environmentWeights.containerZone ?? 0) + 2;
+    environmentWeights.warmArea = (environmentWeights.warmArea ?? 0) + 2;
+  } else if (reading.distance === "far") {
+    environmentWeights.transitionPath = (environmentWeights.transitionPath ?? 0) + 3;
+    environmentWeights.exitPath = (environmentWeights.exitPath ?? 0) + 2;
+  }
+
+  if (reading.movement === "still") {
+    behaviorWeights.automaticRoutine = (behaviorWeights.automaticRoutine ?? 0) + 4;
+    behaviorWeights.placedTemporarily = (behaviorWeights.placedTemporarily ?? 0) + 3;
+  } else if (reading.movement === "moved") {
+    behaviorWeights.forgotDuringTransition = (behaviorWeights.forgotDuringTransition ?? 0) + 5;
+    behaviorWeights.attentionSplit = (behaviorWeights.attentionSplit ?? 0) + 4;
+    environmentWeights.transitionPath = (environmentWeights.transitionPath ?? 0) + 3;
+  } else {
+    behaviorWeights.contextShift = (behaviorWeights.contextShift ?? 0) + 3;
+    behaviorWeights.visualBlindness = (behaviorWeights.visualBlindness ?? 0) + 2;
+  }
+
+  reading.behaviorHints.forEach((hint) => {
+    const normalized = normalizeText(hint);
+
+    if (includesAny(normalized, ["routine", "original place", "familiar"])) {
+      behaviorWeights.automaticRoutine = (behaviorWeights.automaticRoutine ?? 0) + 4;
+    }
+    if (includesAny(normalized, ["transition", "moved", "contact", "public"])) {
+      behaviorWeights.forgotDuringTransition = (behaviorWeights.forgotDuringTransition ?? 0) + 4;
+      behaviorWeights.attentionSplit = (behaviorWeights.attentionSplit ?? 0) + 3;
+    }
+    if (includesAny(normalized, ["covered", "overlooked", "blind", "hidden"])) {
+      behaviorWeights.visualBlindness = (behaviorWeights.visualBlindness ?? 0) + 4;
+    }
+    if (includesAny(normalized, ["container", "pocket", "drawer", "bag"])) {
+      behaviorWeights.placedTemporarily = (behaviorWeights.placedTemporarily ?? 0) + 3;
+    }
+  });
+
+  pushUnique(reasonTags, reading.environments, 6);
+  pushUnique(reasonTags, reading.containerHints, 6);
+  pushUnique(reasonTags, reading.hiddenHints, 6);
+  pushUnique(reasonTags, reading.behaviorHints, 6);
+
+  return {
+    source,
+    directionWeights,
+    environmentWeights,
+    behaviorWeights,
+    confidence: round(reading.confidence),
+    reasonTags,
+    reading
+  };
+}
+
+export function mergeReadingLists(readings: KnowledgeReading[]) {
+  const directions = new Map<Direction, number>();
+  const environments = new Map<string, number>();
+  const colors = new Map<string, number>();
+  const containers = new Map<string, number>();
+  const hidden = new Map<string, number>();
+  const behaviors = new Map<string, number>();
+  const heights = new Map<HeightBand, number>();
+  const distances = new Map<DistanceBand, number>();
+  const movements = new Map<MovementState, number>();
+
+  const addList = (target: Map<string, number>, values: string[], weight: number) => {
+    values.forEach((value) => {
+      target.set(value, (target.get(value) ?? 0) + weight);
+    });
+  };
+
+  readings.forEach((reading) => {
+    const weight = reading.confidence;
+
+    reading.directions.forEach((direction, index) => {
+      directions.set(direction, (directions.get(direction) ?? 0) + weight * (index === 0 ? 1 : index === 1 ? 0.7 : 0.45));
+    });
+
+    addList(environments, reading.environments, weight);
+    addList(colors, reading.colors, weight);
+    addList(containers, reading.containerHints, weight);
+    addList(hidden, reading.hiddenHints, weight);
+    addList(behaviors, reading.behaviorHints, weight);
+    heights.set(reading.height, (heights.get(reading.height) ?? 0) + weight);
+    distances.set(reading.distance, (distances.get(reading.distance) ?? 0) + weight);
+    movements.set(reading.movement, (movements.get(reading.movement) ?? 0) + weight);
+  });
+
+  const topEntries = (target: Map<string, number>, limit: number) =>
+    Array.from(target.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([value]) => value);
+
+  const topKey = <T extends string>(target: Map<T, number>, fallback: T): T =>
+    Array.from(target.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? fallback;
+
+  return {
+    finalDirections: topEntries(directions as Map<string, number>, 3) as Direction[],
+    finalEnvironments: topEntries(environments, 6),
+    finalColors: topEntries(colors, 4),
+    finalContainerHints: topEntries(containers, 5),
+    finalHiddenHints: topEntries(hidden, 5),
+    finalBehaviorHints: topEntries(behaviors, 5),
+    finalHeight: topKey(heights, "unknown"),
+    finalDistance: topKey(distances, "unknown"),
+    finalMovement: topKey(movements, "uncertain")
+  };
+}

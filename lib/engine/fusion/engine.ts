@@ -4,6 +4,7 @@ import {
   HeuristicSignal,
   HeuristicWeights,
   InvestigationEngineResult,
+  KnowledgeResult,
   MemoryPatternResult,
   ObjectProfileResult,
   SceneProfileResult,
@@ -16,81 +17,117 @@ type FusionInput = {
   directions: DirectionResult[];
   objectProfile: ObjectProfileResult;
   sceneProfile: SceneProfileResult;
+  knowledgeResult: KnowledgeResult;
   timeline: TimelineResult;
   memory: MemoryPatternResult;
   heuristicSignals: HeuristicSignal[];
   heuristicWeights: HeuristicWeights[];
 };
 
-type SceneCandidate = {
+type CandidateSource = "zone" | "container" | "hidden";
+
+type SearchCandidate = {
   label: string;
-  source: "zone" | "hidden" | "container" | "transition";
+  source: CandidateSource;
+  tags: string[];
+  score: number;
 };
 
-function clampConfidence(value: number): number {
-  return Math.max(68, Math.min(92, Math.round(value)));
-}
+const SCENE_LANDING: Partial<Record<string, Record<string, string[]>>> = {
+  car: {
+    container: ["center console", "cup holder", "door pocket", "glove box", "back seat pocket", "trunk side pocket"],
+    hidden: ["seat gap", "under seat", "floor mat", "back seat pocket"],
+    movement: ["driver seat", "passenger seat", "back seat"],
+    metal: ["center console", "door pocket"]
+  },
+  bathroom: {
+    water: ["sink counter", "drain edge", "shower shelf", "floor near sink"],
+    hidden: ["behind toiletries", "vanity drawer", "towel folds", "laundry basket"],
+    container: ["small dish", "drawer organizer", "toiletry bag", "jewelry dish"],
+    fabric: ["towel folds", "laundry basket"],
+    jewelry: ["sink counter", "drain edge", "jewelry dish"]
+  },
+  cafe: {
+    container: ["bag pocket", "receipt stack", "card holder", "counter area"],
+    public: ["payment terminal", "counter area", "chair area", "table edge"],
+    transition: ["payment terminal", "counter area", "chair area"],
+    document: ["receipt stack", "card holder", "table edge"]
+  },
+  restaurant: {
+    surface: ["dining table", "under menu", "napkin stack", "booth seat"],
+    hidden: ["chair gap", "booth gap", "under menu", "napkin stack"],
+    public: ["payment counter", "dining table", "coat area"],
+    fabric: ["coat area", "napkin stack"]
+  },
+  hotel: {
+    document: ["document sleeve", "passport holder", "desk papers", "hotel safe"],
+    container: ["suitcase", "passport holder", "document sleeve", "hotel safe"],
+    hidden: ["inside suitcase lining", "under folded clothes", "behind nightstand items"],
+    near: ["nightstand", "bed area"]
+  },
+  kitchen: {
+    water: ["sink edge", "drain area", "counter edge", "near soap dispenser"],
+    fabric: ["dish towel", "under cutting board"],
+    hidden: ["drawer lip", "under cutting board"],
+    jewelry: ["sink edge", "drain area", "dish towel"]
+  },
+  bedroom: {
+    fabric: ["under blankets", "pillow folds", "laundry pile", "hoodie pocket"],
+    container: ["nightstand drawer", "jewelry tray", "hoodie pocket", "closet shelf"],
+    hidden: ["under blankets", "pillow folds", "behind the nightstand"],
+    near: ["nightstand", "bedside table", "dresser top"]
+  },
+  living_room: {
+    electronic: ["charging area", "media console", "coffee table", "side table"],
+    hidden: ["between cushions", "couch gaps", "under a throw blanket", "rug edge"],
+    container: ["remote basket", "blanket basket"],
+    fabric: ["between cushions", "under a throw blanket"]
+  },
+  travel: {
+    transition: ["airport security tray", "gate seat", "boarding area", "luggage handle"],
+    container: ["backpack pocket", "document sleeve", "passport holder", "seat pocket", "suitcase side pocket"],
+    document: ["passport holder", "document sleeve", "airport security tray"],
+    public: ["gate seat", "check-in counter", "taxi floor"]
+  },
+  office: {
+    electronic: ["desk surface", "monitor stand", "charging area"],
+    container: ["work bag", "laptop sleeve", "desk drawer"],
+    hidden: ["under papers", "behind the monitor", "under the desk edge"],
+    document: ["under papers", "desk drawer"]
+  },
+  gym: {
+    container: ["gym bag", "locker", "shoe compartment"],
+    hidden: ["locker gaps", "bench underside", "bag lining", "towel folds"],
+    water: ["shower area", "sink area"],
+    fabric: ["towel folds", "gym bag"]
+  },
+  home: {
+    container: ["daily bag", "jacket pocket", "mail stack"],
+    hidden: ["under mail", "inside clothing folds", "behind a side table"],
+    near: ["entryway", "living room side table", "bedroom surface"]
+  }
+};
 
-function confidenceScore({
-  input,
-  timeline,
-  objectProfile,
-  sceneProfile
-}: Pick<FusionInput, "input" | "timeline" | "objectProfile" | "sceneProfile">): number {
-  let score = 74;
-
-  if (input.story.trim().length > 80) score += 5;
-  if (input.story.trim().length > 140) score += 3;
-  if (!/other/i.test(objectProfile.profile.label)) score += 3;
-  if (!/other/i.test(sceneProfile.profile.label)) score += 3;
-  if (timeline.steps.length >= 3) score += 4;
-  if (timeline.transitionPoints.length >= 2) score += 2;
-
-  const unrelatedPlaceCount = (input.story.match(/\bhome|office|car|hotel|store|gym|airport|restaurant\b/gi) ?? [])
-    .map((place) => place.toLowerCase())
-    .filter((place, index, array) => array.indexOf(place) === index).length;
-
-  if (!input.story.trim()) score -= 6;
-  if (/other/i.test(objectProfile.profile.label)) score -= 3;
-  if (/other/i.test(sceneProfile.profile.label)) score -= 3;
-  if (unrelatedPlaceCount >= 3) score -= 4;
-
-  return clampConfidence(score);
-}
-
-function buildPriorityWhy(
-  zone: string,
-  objectProfile: ObjectProfileResult,
-  timeline: TimelineResult,
-  direction: DirectionResult | undefined,
-  source: SceneCandidate["source"]
-): string {
-  const objectBehavior = objectProfile.profile.commonBehaviors[0]?.toLowerCase() ?? "moves during transitions";
-  const transition = timeline.transitionPoints[0]?.toLowerCase() ?? "the last clear routine shift";
-  const directionText = direction ? `${direction.direction.toLowerCase()}-leaning` : "high-priority";
-  const sourceText =
-    source === "hidden"
-      ? "a hidden-area search"
-      : source === "container"
-        ? "the most likely carry container"
-        : source === "transition"
-          ? "the key transition moment"
-          : "the core scene zone";
-
-  return `This zone matches ${objectBehavior}, lines up with ${transition}, fits the ${directionText} search signal, and belongs to ${sourceText} for this scene.`;
+function round(value: number): number {
+  return Number(value.toFixed(2));
 }
 
 function normalize(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-function wordSet(value: string): Set<string> {
-  return new Set(normalize(value).split(" ").filter(Boolean));
+function includesAny(value: string, terms: string[]): boolean {
+  const normalized = normalize(value);
+  return terms.some((term) => normalized.includes(normalize(term)));
+}
+
+function uniqueList(values: string[]): string[] {
+  return values.filter((value, index) => Boolean(value) && values.indexOf(value) === index);
 }
 
 function overlapScore(left: string, right: string): number {
-  const leftWords = wordSet(left);
-  const rightWords = wordSet(right);
+  const leftWords = new Set(normalize(left).split(" ").filter(Boolean));
+  const rightWords = new Set(normalize(right).split(" ").filter(Boolean));
   let score = 0;
 
   leftWords.forEach((word) => {
@@ -102,454 +139,353 @@ function overlapScore(left: string, right: string): number {
   return score;
 }
 
-function includesAny(value: string, terms: string[]): boolean {
-  const normalized = normalize(value);
-  return terms.some((term) => normalized.includes(term));
+function addWeight(target: Record<string, number>, key: string, amount: number): void {
+  if (!amount) {
+    return;
+  }
+
+  target[key] = round((target[key] ?? 0) + amount);
 }
 
-function sceneCandidates(sceneProfile: SceneProfileResult): SceneCandidate[] {
-  return [
-    ...sceneProfile.profile.zones.slice(0, 5).map((label) => ({ label, source: "zone" as const })),
-    ...sceneProfile.profile.hiddenAreas.slice(0, 4).map((label) => ({ label, source: "hidden" as const })),
-    ...sceneProfile.profile.commonContainers.slice(0, 4).map((label) => ({ label, source: "container" as const })),
-    ...sceneProfile.profile.transitionPoints.slice(0, 3).map((label) => ({ label, source: "transition" as const }))
-  ].filter((candidate, index, array) => array.findIndex((entry) => entry.label === candidate.label) === index);
+function inferAbstractWeights(knowledgeResult: KnowledgeResult): Record<string, number> {
+  const weights: Record<string, number> = {};
+  const pushFromText = (value: string, amount: number) => {
+    const normalized = normalize(value);
+
+    if (includesAny(normalized, ["container", "drawer", "pocket", "bag", "holder", "sleeve", "case", "safe", "tray"])) {
+      addWeight(weights, "container", amount);
+    }
+    if (includesAny(normalized, ["hidden", "covered", "under", "behind", "fold", "corner", "lining", "gap"])) {
+      addWeight(weights, "hidden", amount);
+    }
+    if (includesAny(normalized, ["water", "sink", "drain", "bathroom", "shower", "wet"])) {
+      addWeight(weights, "water", amount);
+    }
+    if (includesAny(normalized, ["electronic", "charging", "device", "light", "lamp", "outlet"])) {
+      addWeight(weights, "electronic", amount);
+    }
+    if (includesAny(normalized, ["fabric", "towel", "clothing", "blanket", "laundry", "coat", "hoodie", "soft"])) {
+      addWeight(weights, "fabric", amount);
+    }
+    if (includesAny(normalized, ["document", "paper", "passport", "receipt", "folder", "menu"])) {
+      addWeight(weights, "document", amount);
+    }
+    if (includesAny(normalized, ["public", "shared", "people", "counter", "terminal", "gate"])) {
+      addWeight(weights, "public", amount);
+    }
+    if (includesAny(normalized, ["familiar", "private", "indoor", "bedside", "nightstand", "home"])) {
+      addWeight(weights, "private", amount);
+    }
+    if (includesAny(normalized, ["surface", "table", "counter", "desk", "nightstand", "shelf", "stand", "ledge"])) {
+      addWeight(weights, "surface", amount);
+    }
+    if (includesAny(normalized, ["metal", "vehicle", "car"])) {
+      addWeight(weights, "metal", amount);
+    }
+    if (includesAny(normalized, ["wood", "furniture", "dresser"])) {
+      addWeight(weights, "wood", amount);
+    }
+    if (includesAny(normalized, ["transition", "route", "path", "moving", "leaving", "travel"])) {
+      addWeight(weights, "transition", amount);
+    }
+  };
+
+  knowledgeResult.finalEnvironments.forEach((value) => pushFromText(value, 4));
+  knowledgeResult.finalContainerHints.forEach((value) => pushFromText(value, 4));
+  knowledgeResult.finalHiddenHints.forEach((value) => pushFromText(value, 4));
+  knowledgeResult.finalBehaviorHints.forEach((value) => pushFromText(value, 3));
+  knowledgeResult.finalColors.forEach((value) => pushFromText(value, 1));
+
+  if (knowledgeResult.finalHeight === "low") addWeight(weights, "lowArea", 5);
+  if (knowledgeResult.finalHeight === "high") addWeight(weights, "highArea", 5);
+  if (knowledgeResult.finalHeight === "middle") addWeight(weights, "surface", 2);
+
+  if (knowledgeResult.finalDistance === "near") addWeight(weights, "near", 5);
+  if (knowledgeResult.finalDistance === "far") addWeight(weights, "far", 5);
+
+  if (knowledgeResult.finalMovement === "moved") addWeight(weights, "movement", 5);
+  if (knowledgeResult.finalMovement === "still") addWeight(weights, "still", 5);
+  if (knowledgeResult.finalMovement === "uncertain") addWeight(weights, "uncertain", 3);
+
+  return weights;
 }
 
-function sceneLocalBoost(candidate: SceneCandidate, sceneProfile: SceneProfileResult): number {
-  const label = candidate.label.toLowerCase();
+function candidateTags(label: string, source: CandidateSource): string[] {
+  const tags = new Set<string>();
+  const normalized = normalize(label);
 
-  if (sceneProfile.key === "car") {
-    if (includesAny(label, ["center console", "door pocket"])) {
-      return 14;
-    }
-    if (includesAny(label, ["seat gap", "cup holder"])) {
-      return 12;
-    }
-    if (includesAny(label, ["floor mat"])) {
-      return 8;
-    }
-    if (includesAny(label, ["trunk", "back seat", "under seat"])) {
-      return 6;
-    }
-    if (includesAny(label, ["console outlet", "charging cable"])) {
-      return 4;
-    }
+  if (source === "container") tags.add("container");
+  if (source === "hidden") tags.add("hidden");
+
+  if (includesAny(normalized, ["drawer", "pocket", "bag", "holder", "sleeve", "basket", "console", "safe", "locker", "suitcase", "tray"])) {
+    tags.add("container");
+  }
+  if (includesAny(normalized, ["under", "behind", "between", "gap", "lining", "fold", "corner", "edge"])) {
+    tags.add("hidden");
+  }
+  if (includesAny(normalized, ["sink", "shower", "drain", "soap", "bathroom", "wet"])) {
+    tags.add("water");
+  }
+  if (includesAny(normalized, ["charging", "monitor", "printer", "outlet", "console", "lamp", "media"])) {
+    tags.add("electronic");
+  }
+  if (includesAny(normalized, ["towel", "blanket", "laundry", "hoodie", "coat", "napkin", "sheets", "pillow"])) {
+    tags.add("fabric");
+  }
+  if (includesAny(normalized, ["passport", "document", "receipt", "paper", "folder", "menu", "desk"])) {
+    tags.add("document");
+  }
+  if (includesAny(normalized, ["counter", "payment", "terminal", "gate", "host", "taxi", "security", "checkout"])) {
+    tags.add("public");
+    tags.add("transition");
+  }
+  if (includesAny(normalized, ["bed", "nightstand", "dresser", "closet", "jewelry", "home"])) {
+    tags.add("private");
+  }
+  if (includesAny(normalized, ["table", "counter", "desk", "nightstand", "stand", "surface", "shelf", "ledge"])) {
+    tags.add("surface");
+  }
+  if (includesAny(normalized, ["floor", "under", "drain", "gap", "mat", "rug", "bottom"])) {
+    tags.add("lowArea");
+  }
+  if (includesAny(normalized, ["top", "shelf", "counter", "table", "stand", "ledge"])) {
+    tags.add("highArea");
   }
 
-  if (sceneProfile.key === "restaurant") {
-    if (includesAny(label, ["dining table", "booth seat", "chair gap", "under menu", "coat area", "napkin stack"])) {
-      return 10;
-    }
-    if (includesAny(label, ["chair area", "payment counter", "host stand", "coat pocket"])) {
-      return 6;
-    }
-  }
-
-  if (sceneProfile.key === "cafe") {
-    if (includesAny(label, ["payment terminal", "receipt stack", "counter area", "bag pocket", "card holder"])) {
-      return 10;
-    }
-    if (includesAny(label, ["chair area", "table edge", "cafe table", "under table edge"])) {
-      return 7;
-    }
-  }
-
-  if (sceneProfile.key === "travel") {
-    if (includesAny(label, ["airport security tray", "passport holder", "document sleeve", "backpack", "backpack pocket"])) {
-      return 11;
-    }
-    if (includesAny(label, ["seat pocket", "suitcase side pocket", "boarding area", "gate seat", "luggage handle"])) {
-      return 8;
-    }
-    if (includesAny(label, ["taxi floor", "tray corner", "bag lining"])) {
-      return 6;
-    }
-  }
-
-  if (sceneProfile.key === "living_room") {
-    if (includesAny(label, ["between cushions", "under a throw blanket", "couch gaps", "blanket folds", "media console"])) {
-      return 10;
-    }
-    if (includesAny(label, ["coffee table", "side table", "charging area", "remote basket", "rug edge"])) {
-      return 7;
-    }
-  }
-
-  if (sceneProfile.key === "bedroom") {
-    if (includesAny(label, ["nightstand", "bedside table", "nightstand drawer", "under blankets", "pillow folds", "jewelry tray"])) {
-      return 10;
-    }
-    if (includesAny(label, ["drawer lip", "dresser top", "laundry pile", "closet shelf", "hoodie pocket"])) {
-      return 7;
-    }
-  }
-
-  if (sceneProfile.key === "kitchen") {
-    if (includesAny(label, ["sink area", "sink edge", "drain area", "under a dish towel", "counter edge", "drawer lip"])) {
-      return 8;
-    }
-  }
-
-  return 0;
+  return Array.from(tags);
 }
 
-function itemSceneAffinityBoost(
-  candidate: SceneCandidate,
-  objectProfile: ObjectProfileResult,
-  sceneProfile: SceneProfileResult
-): number {
-  const label = candidate.label.toLowerCase();
+function buildSceneCandidates(sceneProfile: SceneProfileResult, knowledgeWeights: Record<string, number>, objectKey: string): SearchCandidate[] {
+  const byLabel = new Map<string, SearchCandidate>();
+  const addCandidate = (label: string, source: CandidateSource) => {
+    if (!label) return;
+    if (!byLabel.has(label)) {
+      byLabel.set(label, {
+        label,
+        source,
+        tags: candidateTags(label, source),
+        score: 0
+      });
+    }
+  };
 
-  if (objectProfile.key === "glasses" && (sceneProfile.key === "restaurant" || sceneProfile.key === "cafe")) {
-    if (includesAny(label, ["dining table", "booth seat", "coat area"])) {
-      return 16;
-    }
-    if (includesAny(label, ["cafe table", "table edge", "under menu", "napkin stack", "chair gap", "booth gap"])) {
-      return 13;
-    }
-    if (includesAny(label, ["coat area", "coat pocket", "bag pocket", "chair area", "host stand", "payment terminal"])) {
-      return 8;
-    }
-  }
+  sceneProfile.profile.zones.forEach((label) => addCandidate(label, "zone"));
+  sceneProfile.profile.commonContainers.forEach((label) => addCandidate(label, "container"));
+  sceneProfile.profile.hiddenAreas.forEach((label) => addCandidate(label, "hidden"));
 
-  if (objectProfile.key === "wallet" && sceneProfile.key === "cafe") {
-    if (includesAny(label, ["payment terminal", "receipt stack", "bag pocket", "card holder", "counter area"])) {
-      return 12;
+  const landing = SCENE_LANDING[sceneProfile.key] ?? {};
+  Object.entries(landing).forEach(([tag, labels]) => {
+    const baseTag = tag === "jewelry" ? "water" : tag;
+    if ((knowledgeWeights[baseTag] ?? 0) <= 0 && tag !== objectKey) {
+      return;
     }
-    if (includesAny(label, ["table edge", "chair area", "cafe table", "wallet"])) {
-      return 8;
-    }
-  }
 
-  if (sceneProfile.key === "car" && objectProfile.key === "keys") {
-    if (includesAny(label, ["center console", "door pocket"])) {
-      return 16;
-    }
-    if (includesAny(label, ["seat gap", "cup holder"])) {
-      return 13;
-    }
-    if (includesAny(label, ["floor mat"])) {
-      return 9;
-    }
-    if (includesAny(label, ["jacket pocket", "driver seat"])) {
-      return 8;
-    }
-  }
-
-  if (sceneProfile.key === "car" && objectProfile.key === "wallet") {
-    if (includesAny(label, ["center console", "door pocket", "cup holder"])) {
-      return 14;
-    }
-    if (includesAny(label, ["seat gap", "back seat pocket"])) {
-      return 8;
-    }
-  }
-
-  if (sceneProfile.key === "car" && objectProfile.key === "camera") {
-    if (includesAny(label, ["center console", "door pocket", "seat gap"])) {
-      return 14;
-    }
-    if (includesAny(label, ["camera bag", "trunk", "back seat", "trunk side pocket", "floor mat"])) {
-      return 11;
-    }
-    if (includesAny(label, ["cup holder", "under seat rail"])) {
-      return 7;
-    }
-  }
-
-  if (sceneProfile.key === "car" && objectProfile.key === "phone") {
-    if (includesAny(label, ["center console", "door pocket", "seat gap"])) {
-      return 14;
-    }
-    if (includesAny(label, ["cup holder", "floor mat"])) {
-      return 11;
-    }
-    if (includesAny(label, ["back seat pocket", "charging cable"])) {
-      return 7;
-    }
-  }
-
-  if (sceneProfile.key === "living_room" && (objectProfile.key === "audio" || objectProfile.key === "phone")) {
-    if (includesAny(label, ["between cushions", "under a throw blanket", "couch gaps", "media console", "charging area"])) {
-      return 13;
-    }
-    if (includesAny(label, ["coffee table", "side table", "remote basket", "blanket folds"])) {
-      return 9;
-    }
-  }
-
-  if (sceneProfile.key === "living_room" && (objectProfile.key === "glasses" || objectProfile.key === "keys")) {
-    if (includesAny(label, ["coffee table", "side table", "between cushions", "couch gaps", "rug edge"])) {
-      return 11;
-    }
-  }
-
-  if (sceneProfile.key === "bedroom" && objectProfile.key === "jewelry") {
-    if (includesAny(label, ["under blankets", "nightstand drawer", "jewelry tray", "hoodie pocket"])) {
-      return 13;
-    }
-    if (includesAny(label, ["bedside table", "nightstand", "dresser top", "pillow folds", "closet shelf"])) {
-      return 9;
-    }
-  }
-
-  if (sceneProfile.key === "bedroom" && (objectProfile.key === "phone" || objectProfile.key === "glasses" || objectProfile.key === "wallet")) {
-    if (includesAny(label, ["nightstand", "bedside table", "under blankets", "pillow folds", "drawer lip"])) {
-      return 11;
-    }
-  }
-
-  if (sceneProfile.key === "travel" && objectProfile.key === "documents") {
-    if (includesAny(label, ["airport security tray", "passport holder", "document sleeve", "backpack", "backpack pocket"])) {
-      return 14;
-    }
-    if (includesAny(label, ["seat pocket", "suitcase side pocket", "boarding area", "tray corner"])) {
-      return 9;
-    }
-  }
-
-  if (sceneProfile.key === "travel" && objectProfile.key === "bag") {
-    if (includesAny(label, ["airport security tray", "backpack", "backpack pocket", "bag lining", "suitcase side pocket"])) {
-      return 13;
-    }
-    if (includesAny(label, ["gate seat", "seat pocket", "boarding area", "luggage handle"])) {
-      return 8;
-    }
-  }
-
-  if (sceneProfile.key === "travel" && (objectProfile.key === "phone" || objectProfile.key === "wallet" || objectProfile.key === "audio")) {
-    if (includesAny(label, ["seat pocket", "gate seat", "airport security tray", "backpack pocket", "taxi floor"])) {
-      return 10;
-    }
-  }
-
-  if (sceneProfile.key === "kitchen" && objectProfile.key === "jewelry") {
-    if (includesAny(label, ["sink area", "sink edge", "drain area", "under a dish towel", "counter edge", "drawer lip"])) {
-      return 12;
-    }
-    if (includesAny(label, ["under cutting board", "near soap dispenser", "sink area"])) {
-      return 8;
-    }
-  }
-
-  if (sceneProfile.key === "hotel" && objectProfile.key === "bag") {
-    if (includesAny(label, ["backpack pocket", "suitcase", "under bed edge", "luggage area"])) {
-      return 10;
-    }
-  }
-
-  return 0;
-}
-
-function objectBoost(
-  candidate: SceneCandidate,
-  objectProfile: ObjectProfileResult,
-  sceneProfile: SceneProfileResult
-): number {
-  const label = candidate.label.toLowerCase();
-  let boost = 0;
-
-  objectProfile.profile.likelyContainers.forEach((container) => {
-    boost += overlapScore(candidate.label, container) * 6;
-  });
-  objectProfile.profile.riskZones.forEach((zone) => {
-    boost += overlapScore(candidate.label, zone) * 4;
-  });
-  objectProfile.profile.searchHints.forEach((hint) => {
-    boost += overlapScore(candidate.label, hint) * 2;
-  });
-
-  if (objectProfile.key === "documents") {
-    if (includesAny(label, ["passport", "document", "suitcase", "desk", "safe", "checkout"])) {
-      boost += 10;
-    }
-  }
-
-  if (objectProfile.key === "wallet") {
-    if (includesAny(label, ["payment terminal", "receipt", "card holder", "bag pocket"])) {
-      boost += 10;
-    }
-    if (includesAny(label, ["counter area", "chair area", "table", "checkout", "paying"])) {
-      boost += 7;
-    }
-  }
-
-  if (objectProfile.key === "phone") {
-    if (includesAny(label, ["desk", "chair", "meeting", "printer", "laptop", "bag"])) {
-      boost += 8;
-    }
-    if (includesAny(label, ["couch", "bed", "blanket"])) {
-      boost -= 10;
-    }
-  }
-
-  if (objectProfile.key === "audio") {
-    if (includesAny(label, ["locker", "bench", "bag", "gap", "charging", "sink"])) {
-      boost += 8;
-    }
-  }
-
-  if (objectProfile.key === "jewelry") {
-    if (includesAny(label, ["sink", "bathroom", "toiletry", "towel", "counter"])) {
-      boost += 8;
-    }
-  }
-
-  boost += sceneLocalBoost(candidate, sceneProfile);
-  boost += itemSceneAffinityBoost(candidate, objectProfile, sceneProfile);
-
-  return boost;
-}
-
-function timelineBoost(candidate: SceneCandidate, timeline: TimelineResult): number {
-  const timelineText = [...timeline.steps, ...timeline.transitionPoints, ...timeline.missingMoments].join(" ");
-  let boost = overlapScore(candidate.label, timelineText) * 5;
-
-  if (candidate.source === "transition") {
-    boost += 2;
-  }
-  if (candidate.source === "hidden") {
-    boost += 3;
-  }
-  if (candidate.source === "container") {
-    boost += 4;
-  }
-
-  return boost;
-}
-
-function heuristicEnvironmentBoost(candidate: SceneCandidate, heuristicWeights: HeuristicWeights[]): number {
-  const totals = heuristicWeights.reduce<Record<string, number>>((accumulator, heuristic) => {
-    Object.entries(heuristic.environmentWeights).forEach(([key, value]) => {
-      accumulator[key] = (accumulator[key] ?? 0) + value * heuristic.confidence;
+    labels.forEach((label) => {
+      addCandidate(label, tag === "hidden" ? "hidden" : tag === "container" ? "container" : "zone");
     });
-    return accumulator;
-  }, {});
+  });
 
-  let boost = 0;
-
-  if (candidate.source === "hidden") {
-    boost += (totals.hiddenCorner ?? 0) * 0.6;
-    boost += (totals.lowArea ?? 0) * 0.35;
-  }
-  if (candidate.source === "container") {
-    boost += (totals.containerZone ?? 0) * 0.65;
-    boost += (totals.storageArea ?? 0) * 0.45;
-    boost += (totals.documentZone ?? 0) * 0.35;
-  }
-  if (candidate.source === "transition") {
-    boost += (totals.transitionPath ?? 0) * 0.7;
-    boost += (totals.entryZone ?? 0) * 0.4;
-    boost += (totals.exitPath ?? 0) * 0.4;
-  }
-  if (candidate.source === "zone") {
-    boost += (totals.wetArea ?? 0) * 0.3;
-    boost += (totals.electronicArea ?? 0) * 0.3;
-    boost += (totals.warmArea ?? 0) * 0.25;
-  }
-
-  return Math.min(boost, 14);
+  return Array.from(byLabel.values());
 }
 
-function heuristicBehaviorBoost(candidate: SceneCandidate, heuristicWeights: HeuristicWeights[]): number {
-  const totals = heuristicWeights.reduce<Record<string, number>>((accumulator, heuristic) => {
-    Object.entries(heuristic.behaviorWeights).forEach(([key, value]) => {
-      accumulator[key] = (accumulator[key] ?? 0) + value * heuristic.confidence;
-    });
-    return accumulator;
-  }, {});
+function scoreCandidate(
+  candidate: SearchCandidate,
+  input: FusionInput,
+  knowledgeWeights: Record<string, number>
+): number {
+  const { objectProfile, sceneProfile, knowledgeResult } = input;
+  let score = candidate.source === "zone" ? 20 : candidate.source === "container" ? 19 : 18;
 
-  let boost = 0;
+  candidate.tags.forEach((tag) => {
+    score += (knowledgeWeights[tag] ?? 0) * 1.35;
+  });
 
-  if (candidate.source === "transition") {
-    boost += ((totals.forgotDuringTransition ?? 0) + (totals.attentionSplit ?? 0)) * 0.35;
-    boost += ((totals.routineInterruption ?? 0) + (totals.taskSwitching ?? 0)) * 0.2;
-  }
   if (candidate.source === "container") {
-    boost += ((totals.placedTemporarily ?? 0) + (totals.packing ?? 0) + (totals.unpacking ?? 0)) * 0.28;
-    boost += ((totals.contextShift ?? 0) + (totals.automaticRoutine ?? 0)) * 0.12;
+    score += (knowledgeWeights.container ?? 0) * 0.85;
   }
   if (candidate.source === "hidden") {
-    boost += ((totals.visualBlindness ?? 0) + (totals.stateDependentMemory ?? 0)) * 0.28;
-    boost += (totals.contextShift ?? 0) * 0.15;
+    score += (knowledgeWeights.hidden ?? 0) * 0.9;
   }
 
-  return Math.min(boost, 12);
+  objectProfile.profile.likelyContainers.forEach((hint) => {
+    score += overlapScore(candidate.label, hint) * 4.5;
+  });
+
+  objectProfile.profile.riskZones.forEach((hint) => {
+    score += overlapScore(candidate.label, hint) * 4.2;
+  });
+
+  knowledgeResult.finalContainerHints.forEach((hint) => {
+    score += overlapScore(candidate.label, hint) * 4.4;
+  });
+
+  knowledgeResult.finalHiddenHints.forEach((hint) => {
+    score += overlapScore(candidate.label, hint) * 4.4;
+  });
+
+  knowledgeResult.finalEnvironments.forEach((hint) => {
+    score += overlapScore(candidate.label, hint) * 3.2;
+  });
+
+  if (knowledgeResult.finalDistance === "near" && includesAny(candidate.label, ["nightstand", "dresser", "bag", "drawer", "table", "counter"])) {
+    score += 4;
+  }
+  if (knowledgeResult.finalDistance === "far" && includesAny(candidate.label, ["seat", "gate", "counter", "checkout", "taxi", "trunk", "luggage"])) {
+    score += 4;
+  }
+  if (knowledgeResult.finalMovement === "still" && candidate.source !== "hidden") {
+    score += 3;
+  }
+  if (knowledgeResult.finalMovement === "moved" && includesAny(candidate.label, ["seat", "counter", "path", "bag", "luggage", "console"])) {
+    score += 3;
+  }
+
+  if (objectProfile.key === "documents" && (candidate.tags.includes("document") || candidate.tags.includes("container"))) {
+    score += 8;
+  }
+  if (objectProfile.key === "jewelry" && (candidate.tags.includes("water") || candidate.tags.includes("fabric") || candidate.tags.includes("hidden"))) {
+    score += 8;
+  }
+  if ((objectProfile.key === "audio" || objectProfile.key === "phone") && (candidate.tags.includes("electronic") || candidate.tags.includes("hidden"))) {
+    score += 7;
+  }
+  if (objectProfile.key === "glasses" && (candidate.tags.includes("surface") || candidate.tags.includes("fabric") || candidate.tags.includes("hidden"))) {
+    score += 6;
+  }
+  if (objectProfile.key === "wallet" && (candidate.tags.includes("container") || candidate.tags.includes("document") || candidate.tags.includes("public"))) {
+    score += 7;
+  }
+  if (objectProfile.key === "keys" && (candidate.tags.includes("container") || includesAny(candidate.label, ["console", "door pocket", "cup holder"]))) {
+    score += 6;
+  }
+  if (objectProfile.key === "bag" && (candidate.tags.includes("container") || includesAny(candidate.label, ["chair", "seat", "luggage"]))) {
+    score += 6;
+  }
+  if (objectProfile.key === "camera" && (candidate.tags.includes("container") || candidate.tags.includes("lowArea"))) {
+    score += 6;
+  }
+
+  if (sceneProfile.key === "bathroom" && includesAny(candidate.label, ["sink", "drain", "towel", "toiletry", "dish"])) {
+    score += 5;
+  }
+  if (sceneProfile.key === "cafe" && includesAny(candidate.label, ["payment terminal", "receipt stack", "card holder", "bag pocket"])) {
+    score += 5;
+  }
+  if (sceneProfile.key === "restaurant" && includesAny(candidate.label, ["dining table", "under menu", "napkin stack", "chair gap"])) {
+    score += 5;
+  }
+  if (sceneProfile.key === "hotel" && includesAny(candidate.label, ["passport holder", "document sleeve", "suitcase", "hotel safe"])) {
+    score += 5;
+  }
+
+  return round(score);
+}
+
+function buildPriorityWhy(candidate: SearchCandidate, input: FusionInput): string {
+  const firstBehavior = input.objectProfile.profile.commonBehaviors[0]?.toLowerCase() ?? "gets set down during routine shifts";
+  const firstTransition = input.timeline.transitionPoints[0]?.toLowerCase() ?? "the last clear routine change";
+  const firstDirection = input.knowledgeResult.finalDirections[0]?.toLowerCase() ?? input.directions[0]?.direction.toLowerCase() ?? "nearby";
+
+  return `This spot fits ${firstBehavior}, aligns with ${firstTransition}, and matches the strongest ${firstDirection}-leaning spatial signal from the completed investigation.`;
 }
 
 function buildSearchPriority(input: FusionInput): SearchPriorityItem[] {
-  const directionOne = input.directions[0];
-  const directionTwo = input.directions[1];
-
-  const ranked = sceneCandidates(input.sceneProfile)
+  const knowledgeWeights = inferAbstractWeights(input.knowledgeResult);
+  const candidates = buildSceneCandidates(input.sceneProfile, knowledgeWeights, input.objectProfile.key)
     .map((candidate) => ({
-      candidate,
-      score:
-        (candidate.source === "zone"
-          ? 84
-          : candidate.source === "hidden"
-            ? 82
-            : candidate.source === "container"
-              ? 80
-              : 77) +
-        objectBoost(candidate, input.objectProfile, input.sceneProfile) +
-        timelineBoost(candidate, input.timeline) +
-        heuristicEnvironmentBoost(candidate, input.heuristicWeights) +
-        heuristicBehaviorBoost(candidate, input.heuristicWeights)
+      ...candidate,
+      score: scoreCandidate(candidate, input, knowledgeWeights)
     }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
+    .sort((left, right) => right.score - left.score);
 
-  return ranked.map(({ candidate, score }, index) => ({
+  return candidates.slice(0, 6).map((candidate, index) => ({
     label: candidate.label,
-    score: Math.max(72, Math.min(93, Math.round(score - index))),
-    direction: index % 2 === 0 ? directionOne?.direction : directionTwo?.direction,
-    why: buildPriorityWhy(
-      candidate.label,
-      input.objectProfile,
-      input.timeline,
-      index % 2 === 0 ? directionOne : directionTwo,
-      candidate.source
-    ),
-    relatedTags: [
-      input.sceneProfile.key,
-      input.objectProfile.key,
-      candidate.source,
-      input.timeline.transitionPoints[index % Math.max(input.timeline.transitionPoints.length, 1)] ?? "transition",
-      input.objectProfile.profile.searchHints[index % input.objectProfile.profile.searchHints.length] ?? "search-hint"
-    ]
+    score: round(candidate.score - index * 0.35),
+    why: buildPriorityWhy(candidate, input),
+    direction: input.directions[index % input.directions.length]?.direction,
+    relatedTags: candidate.tags.slice(0, 5)
   }));
+}
+
+function buildEnvironmentalClues(input: FusionInput, searchPriority: SearchPriorityItem[]): string[] {
+  const { knowledgeResult, sceneProfile } = input;
+  const hiddenTargets = uniqueList([
+    ...knowledgeResult.finalHiddenHints,
+    ...sceneProfile.profile.hiddenAreas
+  ]).slice(0, 3);
+  const containerTargets = uniqueList([
+    ...knowledgeResult.finalContainerHints,
+    ...sceneProfile.profile.commonContainers
+  ]).slice(0, 3);
+
+  const clues = [
+    hiddenTargets.length > 0 ? `Covered-area signal: ${hiddenTargets.join(", ")}.` : "",
+    containerTargets.length > 0 ? `Container signal: ${containerTargets.join(", ")}.` : "",
+    knowledgeResult.finalHeight !== "unknown" ? `Height signal: ${knowledgeResult.finalHeight} level surfaces.` : "",
+    knowledgeResult.finalColors.length > 0 ? `Color cue: ${knowledgeResult.finalColors.join(", ")}.` : "",
+    searchPriority[0] ? `Start with: ${searchPriority[0].label}.` : ""
+  ];
+
+  return clues.filter(Boolean);
+}
+
+function buildMissingMoments(timeline: TimelineResult): string[] {
+  const combined = uniqueList([
+    ...timeline.missingMoments,
+    ...timeline.attentionShiftMoments,
+    ...timeline.transitionPoints
+  ]);
+
+  return combined.slice(0, 5);
+}
+
+function confidenceScore(input: FusionInput): number {
+  const baseKnowledge = input.knowledgeResult.readings.reduce((total, reading) => total + reading.confidence, 0);
+  const averageKnowledge = input.knowledgeResult.readings.length > 0 ? baseKnowledge / input.knowledgeResult.readings.length : 0.6;
+
+  let score = 58 + averageKnowledge * 28;
+  score += Math.min(input.timeline.steps.length, 4) * 3;
+  score += Math.min(input.timeline.transitionPoints.length, 3) * 2;
+  score += input.input.story.trim().length > 60 ? 4 : 0;
+  score += input.sceneProfile.key !== "other" ? 3 : 0;
+  score += input.objectProfile.key !== "other" ? 3 : 0;
+
+  return Math.max(62, Math.min(90, Math.round(score)));
+}
+
+function buildCalmSearchPlan(input: FusionInput, searchPriority: SearchPriorityItem[]): string[] {
+  const first = searchPriority[0]?.label ?? "the first likely zone";
+  const second = searchPriority[1]?.label ?? "the next carry spot";
+  const third = searchPriority[2]?.label ?? "the nearest hidden area";
+  const transition = input.timeline.transitionPoints[0]?.toLowerCase() ?? "the last routine shift";
+
+  return [
+    `Start with ${first} and finish that area completely before moving on.`,
+    `Then check ${second} and ${third}, including pockets, folds, and anything stacked on top.`,
+    "Use one calm 15-minute pass: visible surfaces first, then containers, then low hidden edges.",
+    `If it is not there, retrace ${transition} and repeat the same order once more without rushing.`
+  ];
 }
 
 export function fuseInvestigation(
   input: FusionInput
-): Omit<InvestigationEngineResult, "promptContext" | "heuristicWeights"> {
+): Omit<InvestigationEngineResult, "heuristicWeights" | "promptContext"> {
   const searchPriority = buildSearchPriority(input);
-  const confidence = confidenceScore(input);
-  const environmentalClues = [
-    ...input.sceneProfile.environmentalClues,
-    ...input.objectProfile.profile.riskZones.slice(0, 2),
-    ...input.heuristicSignals.flatMap((signal) => signal.environmentTags.slice(0, 1))
-  ].filter((value, index, array) => array.indexOf(value) === index).slice(0, 6);
-
-  const calmSearchPlan = [
-    ...input.memory.calmProtocol.slice(0, 3),
-    ...searchPriority.slice(0, 2).map((priority, index) =>
-      `${index === 0 ? "Start with" : "Then check"} ${priority.label.toLowerCase()}.`
-    )
-  ].slice(0, 5);
+  const environmentalClues = buildEnvironmentalClues(input, searchPriority);
+  const missingMoments = buildMissingMoments(input.timeline);
+  const calmSearchPlan = buildCalmSearchPlan(input, searchPriority);
 
   return {
-    confidenceScore: confidence,
+    confidenceScore: confidenceScore(input),
     topDirections: input.directions,
     timeline: input.timeline,
     objectProfile: input.objectProfile,
     sceneProfile: input.sceneProfile,
+    knowledgeResult: input.knowledgeResult,
     heuristicSignals: input.heuristicSignals,
     searchPriority,
     environmentalClues,
-    missingMoments: input.timeline.missingMoments,
+    missingMoments,
     calmSearchPlan
   };
 }

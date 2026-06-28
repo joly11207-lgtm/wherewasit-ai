@@ -1,202 +1,248 @@
-import { Direction, HeuristicWeights } from "@/lib/engine/types";
+import { Direction, HeuristicWeights, KnowledgeReading } from "@/lib/engine/types";
 import { HeuristicContext } from "@/lib/engine/heuristics/types";
-import { buildDeterministicSeed, hasAnyPhrase } from "@/lib/engine/heuristics/utils";
+import { buildDeterministicSeed, hasAnyPhrase, readingToHeuristicWeights } from "@/lib/engine/heuristics/utils";
 
-type ArchetypeKey =
+type SymbolKey =
   | "hidden"
   | "covered"
-  | "inside_container"
-  | "near_clothing"
-  | "near_documents"
-  | "near_water"
-  | "near_electronics"
-  | "overlooked_surface"
-  | "transition"
+  | "container"
+  | "document"
+  | "water"
+  | "electronics"
+  | "clothing"
   | "public_contact"
-  | "routine_blindness"
-  | "under_object"
-  | "near_personal_item";
+  | "transition"
+  | "overlooked_surface";
 
-type ArchetypeProfile = {
-  directionWeights: Partial<Record<Direction, number>>;
-  environmentWeights: Record<string, number>;
-  behaviorWeights: Record<string, number>;
-  reasonTags: string[];
+type SymbolProfile = {
+  directions: Direction[];
+  environments: string[];
+  colors: string[];
+  height: KnowledgeReading["height"];
+  distance: KnowledgeReading["distance"];
+  movement: KnowledgeReading["movement"];
+  containerHints: string[];
+  hiddenHints: string[];
+  behaviorHints: string[];
 };
 
-const ARCHETYPES: Record<ArchetypeKey, ArchetypeProfile> = {
+const SYMBOL_PROFILES: Record<SymbolKey, SymbolProfile> = {
   hidden: {
-    directionWeights: { Northeast: 5, North: 3 },
-    environmentWeights: { hiddenCorner: 10, lowArea: 6 },
-    behaviorWeights: { visualBlindness: 7, contextShift: 5 },
-    reasonTags: ["hidden", "covered", "blind-spot"]
+    directions: ["Northeast", "North"],
+    environments: ["hidden corner", "blocked surface"],
+    colors: ["gray"],
+    height: "low",
+    distance: "near",
+    movement: "still",
+    containerHints: ["inside nearby storage"],
+    hiddenHints: ["behind an object", "under a nearby layer"],
+    behaviorHints: ["missed on the first pass", "blocked from view"]
   },
   covered: {
-    directionWeights: { Southwest: 4, Northeast: 3 },
-    environmentWeights: { hiddenCorner: 8, storageArea: 5 },
-    behaviorWeights: { visualBlindness: 6, placedTemporarily: 5 },
-    reasonTags: ["covered", "soft-layer", "under-object"]
+    directions: ["Southwest", "Northeast"],
+    environments: ["covered surface", "fabric area"],
+    colors: ["cream"],
+    height: "low",
+    distance: "near",
+    movement: "still",
+    containerHints: ["soft container"],
+    hiddenHints: ["under fabric", "under paper"],
+    behaviorHints: ["covered during routine activity", "needs a careful lift-and-check"]
   },
-  inside_container: {
-    directionWeights: { Southeast: 4, East: 3 },
-    environmentWeights: { containerZone: 10, storageArea: 7 },
-    behaviorWeights: { placedTemporarily: 7, contextShift: 5 },
-    reasonTags: ["inside-container", "bag-pocket", "drawer"]
+  container: {
+    directions: ["Southeast", "East"],
+    environments: ["storage area", "carry layer"],
+    colors: ["brown"],
+    height: "middle",
+    distance: "near",
+    movement: "still",
+    containerHints: ["bag pocket", "drawer", "holder"],
+    hiddenHints: ["inside a lining"],
+    behaviorHints: ["placed into the next container used", "stayed with personal belongings"]
   },
-  near_clothing: {
-    directionWeights: { Southeast: 4, East: 3 },
-    environmentWeights: { containerZone: 8, warmArea: 4 },
-    behaviorWeights: { automaticRoutine: 6, placedTemporarily: 5 },
-    reasonTags: ["clothing", "fabric", "personal-layer"]
+  document: {
+    directions: ["North", "Northeast"],
+    environments: ["paper stack", "document area"],
+    colors: ["navy"],
+    height: "middle",
+    distance: "middle",
+    movement: "uncertain",
+    containerHints: ["document sleeve", "folder"],
+    hiddenHints: ["between papers"],
+    behaviorHints: ["blended into paper layers", "flattened under documents"]
   },
-  near_documents: {
-    directionWeights: { Northeast: 5, North: 4 },
-    environmentWeights: { documentZone: 10, containerZone: 6, storageArea: 5 },
-    behaviorWeights: { taskSwitching: 5, contextShift: 4 },
-    reasonTags: ["documents", "sleeve", "desk-surface"]
+  water: {
+    directions: ["North", "Northwest"],
+    environments: ["water edge", "wet area"],
+    colors: ["blue"],
+    height: "low",
+    distance: "near",
+    movement: "uncertain",
+    containerHints: ["toiletry bag", "small dish"],
+    hiddenHints: ["near drain edge", "behind wet items"],
+    behaviorHints: ["removed during washing", "overlooked after water use"]
   },
-  near_water: {
-    directionWeights: { North: 6, Northeast: 3 },
-    environmentWeights: { wetArea: 9, lowArea: 4 },
-    behaviorWeights: { placedTemporarily: 6, stateDependentMemory: 5 },
-    reasonTags: ["water", "sink", "bathroom"]
+  electronics: {
+    directions: ["South", "East"],
+    environments: ["charging area", "electronic surface"],
+    colors: ["black"],
+    height: "high",
+    distance: "near",
+    movement: "still",
+    containerHints: ["desk organizer", "device pocket"],
+    hiddenHints: ["near a charger"],
+    behaviorHints: ["left near another device", "set beside a cable or outlet"]
   },
-  near_electronics: {
-    directionWeights: { South: 5, East: 3 },
-    environmentWeights: { electronicArea: 10, highArea: 4 },
-    behaviorWeights: { taskSwitching: 6, attentionSplit: 5 },
-    reasonTags: ["electronics", "charging", "visible-surface"]
-  },
-  overlooked_surface: {
-    directionWeights: { South: 4, East: 4 },
-    environmentWeights: { highArea: 7, entryZone: 4 },
-    behaviorWeights: { visualBlindness: 7, placedTemporarily: 5 },
-    reasonTags: ["overlooked-surface", "visible", "set-down"]
-  },
-  transition: {
-    directionWeights: { East: 5, West: 4 },
-    environmentWeights: { transitionPath: 10, exitPath: 5, entryZone: 4 },
-    behaviorWeights: { forgotDuringTransition: 8, attentionSplit: 6 },
-    reasonTags: ["transition", "handoff", "movement"]
+  clothing: {
+    directions: ["Southeast", "Southwest"],
+    environments: ["fabric area", "clothing layer"],
+    colors: ["olive"],
+    height: "middle",
+    distance: "near",
+    movement: "moved",
+    containerHints: ["coat pocket", "hoodie pocket", "laundry basket"],
+    hiddenHints: ["inside folds", "under clothing"],
+    behaviorHints: ["moved with soft layers", "carried with clothing or towels"]
   },
   public_contact: {
-    directionWeights: { West: 5, Northwest: 4 },
-    environmentWeights: { transitionPath: 8, exitPath: 6 },
-    behaviorWeights: { routineInterruption: 8, attentionSplit: 6 },
-    reasonTags: ["public-contact", "shared-surface", "interruption"]
+    directions: ["West", "Northwest"],
+    environments: ["shared surface", "public path"],
+    colors: ["white"],
+    height: "middle",
+    distance: "far",
+    movement: "moved",
+    containerHints: ["counter tray", "outer pocket"],
+    hiddenHints: ["near a shared edge"],
+    behaviorHints: ["attention shifted around other people", "left on a public surface"]
   },
-  routine_blindness: {
-    directionWeights: { East: 4, North: 3 },
-    environmentWeights: { hiddenCorner: 6, storageArea: 5 },
-    behaviorWeights: { automaticRoutine: 8, visualBlindness: 7 },
-    reasonTags: ["routine-blindness", "habit", "missed-on-second-look"]
+  transition: {
+    directions: ["East", "West"],
+    environments: ["transition path", "handoff surface"],
+    colors: ["amber"],
+    height: "middle",
+    distance: "far",
+    movement: "moved",
+    containerHints: ["temporary carry pocket"],
+    hiddenHints: ["near the path out"],
+    behaviorHints: ["lost during a route change", "task switching moment"]
   },
-  under_object: {
-    directionWeights: { Northeast: 4, Southwest: 4 },
-    environmentWeights: { hiddenCorner: 8, lowArea: 6 },
-    behaviorWeights: { visualBlindness: 7, placedTemporarily: 4 },
-    reasonTags: ["under-object", "blocked-view", "low-surface"]
-  },
-  near_personal_item: {
-    directionWeights: { Southeast: 4, West: 3 },
-    environmentWeights: { containerZone: 8, warmArea: 4 },
-    behaviorWeights: { contextShift: 6, automaticRoutine: 5 },
-    reasonTags: ["personal-item", "next-to-belongings", "carry-zone"]
+  overlooked_surface: {
+    directions: ["South", "East"],
+    environments: ["visible surface", "resting ledge"],
+    colors: ["gold"],
+    height: "high",
+    distance: "near",
+    movement: "still",
+    containerHints: ["open tray"],
+    hiddenHints: ["beside visible clutter"],
+    behaviorHints: ["plain sight but mentally filtered out", "set down without marking it"]
   }
 };
 
-function chooseArchetypes(context: HeuristicContext): ArchetypeKey[] {
+function uniqueList(values: string[]): string[] {
+  return values.filter((value, index) => Boolean(value) && values.indexOf(value) === index);
+}
+
+function chooseSymbols(context: HeuristicContext): SymbolKey[] {
   const { input, objectProfile, sceneProfile } = context;
   const story = input.story.toLowerCase();
-  const archetypes: ArchetypeKey[] = [];
+  const symbols: SymbolKey[] = [];
 
-  if (sceneProfile.profile.hiddenAreas.length > 0 || hasAnyPhrase(story, ["under", "behind", "inside", "between"])) {
-    archetypes.push("hidden");
+  if (sceneProfile.profile.hiddenAreas.length > 0 || hasAnyPhrase(story, ["under", "behind", "between"])) {
+    symbols.push("hidden");
   }
-  if (objectProfile.key === "documents") archetypes.push("near_documents");
-  if (objectProfile.key === "audio" || objectProfile.key === "phone") archetypes.push("near_electronics");
-  if (sceneProfile.profile.wetAreas?.length || hasAnyPhrase(story, ["sink", "bathroom", "shower", "water"])) {
-    archetypes.push("near_water");
+  if (hasAnyPhrase(story, ["blanket", "towel", "menu", "paper", "napkin"])) {
+    symbols.push("covered");
   }
-  if (hasAnyPhrase(story, ["bag", "pocket", "drawer", "holder", "sleeve", "case"])) {
-    archetypes.push("inside_container");
+  if (hasAnyPhrase(story, ["bag", "drawer", "holder", "pocket", "case", "sleeve"])) {
+    symbols.push("container");
   }
-  if (hasAnyPhrase(story, ["jacket", "hoodie", "coat", "clothes", "blanket", "towel"])) {
-    archetypes.push("near_clothing");
+  if (objectProfile.key === "documents") {
+    symbols.push("document");
   }
-  if (hasAnyPhrase(story, ["meeting", "checkout", "boarding", "security", "paying", "packing"])) {
-    archetypes.push("transition");
+  if (sceneProfile.key === "bathroom" || sceneProfile.key === "kitchen" || hasAnyPhrase(story, ["sink", "shower", "washing"])) {
+    symbols.push("water");
   }
-  if (hasAnyPhrase(story, ["restaurant", "cafe", "airport", "lobby", "taxi", "rideshare"])) {
-    archetypes.push("public_contact");
+  if (objectProfile.key === "audio" || objectProfile.key === "phone" || hasAnyPhrase(story, ["charging", "device", "desk"])) {
+    symbols.push("electronics");
   }
-  if (hasAnyPhrase(story, ["set", "left", "placed", "put it down", "visible"])) {
-    archetypes.push("overlooked_surface");
+  if (hasAnyPhrase(story, ["hoodie", "coat", "jacket", "clothes", "laundry", "towel"])) {
+    symbols.push("clothing");
   }
-  if (hasAnyPhrase(story, ["routine", "usual", "normally", "watching tv", "getting ready"])) {
-    archetypes.push("routine_blindness");
+  if (hasAnyPhrase(story, ["restaurant", "cafe", "airport", "hotel lobby", "taxi", "meeting", "checkout"])) {
+    symbols.push("public_contact");
   }
-  if (hasAnyPhrase(story, ["under", "beneath", "under menu", "under towel"])) {
-    archetypes.push("under_object");
+  if (hasAnyPhrase(story, ["packing", "boarding", "leaving", "moving", "switching", "meeting"])) {
+    symbols.push("transition");
   }
-  if (hasAnyPhrase(story, ["bag", "wallet", "passport", "phone", "coat", "charger"])) {
-    archetypes.push("near_personal_item");
+  if (hasAnyPhrase(story, ["table", "desk", "counter", "nightstand", "visible", "set down"])) {
+    symbols.push("overlooked_surface");
   }
 
-  const unique = archetypes.filter((value, index) => archetypes.indexOf(value) === index);
+  const unique = uniqueList(symbols);
   if (unique.length >= 2) {
-    return unique.slice(0, 2);
+    return unique.slice(0, 2) as SymbolKey[];
   }
 
-  const fallbackKeys = Object.keys(ARCHETYPES) as ArchetypeKey[];
+  const keys = Object.keys(SYMBOL_PROFILES) as SymbolKey[];
   const seed = buildDeterministicSeed(input);
-  const fallback = fallbackKeys[seed % fallbackKeys.length];
-  return [...unique, fallback].filter((value, index, array) => array.indexOf(value) === index).slice(0, 2);
+  unique.push(keys[seed % keys.length]);
+  if (unique.length < 2) {
+    unique.push(keys[(seed + 3) % keys.length]);
+  }
+
+  return uniqueList(unique).slice(0, 2) as SymbolKey[];
 }
 
-function mergeDirections(
-  target: Partial<Record<Direction, number>>,
-  source: Partial<Record<Direction, number>>,
-  scale: number
-): void {
-  Object.entries(source).forEach(([direction, value]) => {
-    target[direction as Direction] = Number((((target[direction as Direction] ?? 0) + value * scale)).toFixed(2));
-  });
+function chooseHeight(values: KnowledgeReading["height"][]): KnowledgeReading["height"] {
+  if (values.includes("low")) return "low";
+  if (values.includes("high")) return "high";
+  if (values.includes("middle")) return "middle";
+  return "unknown";
 }
 
-function mergeMap(target: Record<string, number>, source: Record<string, number>, scale: number): void {
-  Object.entries(source).forEach(([key, value]) => {
-    target[key] = Number((((target[key] ?? 0) + value * scale)).toFixed(2));
-  });
+function chooseDistance(values: KnowledgeReading["distance"][]): KnowledgeReading["distance"] {
+  if (values.includes("near")) return "near";
+  if (values.includes("middle")) return "middle";
+  if (values.includes("far")) return "far";
+  return "unknown";
+}
+
+function chooseMovement(values: KnowledgeReading["movement"][]): KnowledgeReading["movement"] {
+  if (values.includes("moved")) return "moved";
+  if (values.includes("still")) return "still";
+  if (values.includes("uncertain")) return "uncertain";
+  return "uncertain";
+}
+
+function createReading(context: HeuristicContext): KnowledgeReading {
+  const selected = chooseSymbols(context);
+  const profiles = selected.map((key) => SYMBOL_PROFILES[key]);
+
+  const directions = uniqueList(profiles.flatMap((profile) => profile.directions)).slice(0, 3) as Direction[];
+  const environments = uniqueList(profiles.flatMap((profile) => profile.environments)).slice(0, 6);
+  const colors = uniqueList(profiles.flatMap((profile) => profile.colors)).slice(0, 4);
+  const containerHints = uniqueList(profiles.flatMap((profile) => profile.containerHints)).slice(0, 5);
+  const hiddenHints = uniqueList(profiles.flatMap((profile) => profile.hiddenHints)).slice(0, 5);
+  const behaviorHints = uniqueList(profiles.flatMap((profile) => profile.behaviorHints)).slice(0, 5);
+
+  return {
+    method: "symbolic_tarot",
+    resultKey: selected.join("+"),
+    directions,
+    environments,
+    colors,
+    height: chooseHeight(profiles.map((profile) => profile.height)),
+    distance: chooseDistance(profiles.map((profile) => profile.distance)),
+    movement: chooseMovement(profiles.map((profile) => profile.movement)),
+    containerHints,
+    hiddenHints,
+    behaviorHints,
+    confidence: 0.62
+  };
 }
 
 export function tarotHeuristic(context: HeuristicContext): HeuristicWeights {
-  const selected = chooseArchetypes(context);
-  const directionWeights: Partial<Record<Direction, number>> = {};
-  const environmentWeights: Record<string, number> = {};
-  const behaviorWeights: Record<string, number> = {};
-
-  selected.forEach((key, index) => {
-    const profile = ARCHETYPES[key];
-    const scale = index === 0 ? 1 : 0.72;
-    mergeDirections(directionWeights, profile.directionWeights, scale);
-    mergeMap(environmentWeights, profile.environmentWeights, scale);
-    mergeMap(behaviorWeights, profile.behaviorWeights, scale);
-  });
-
-  if (context.objectProfile.key === "documents") {
-    environmentWeights.documentZone = (environmentWeights.documentZone ?? 0) + 2;
-  }
-
-  return {
-    source: "tarot",
-    directionWeights,
-    environmentWeights,
-    behaviorWeights,
-    confidence: 0.66,
-    reasonTags: selected
-      .flatMap((key) => ARCHETYPES[key].reasonTags)
-      .filter((tag, index, array) => array.indexOf(tag) === index)
-      .slice(0, 6)
-  };
+  const reading = createReading(context);
+  return readingToHeuristicWeights("tarot", reading);
 }

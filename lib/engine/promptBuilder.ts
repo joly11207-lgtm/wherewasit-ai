@@ -21,6 +21,7 @@ export function buildPrompt(result: InvestigationEngineResult): string {
         hiddenAreas: result.sceneProfile.profile.hiddenAreas,
         commonContainers: result.sceneProfile.profile.commonContainers
       },
+      knowledgeResult: result.knowledgeResult,
       heuristicSignals: result.heuristicSignals.map((signal) => ({
         directions: signal.directions,
         environmentTags: signal.environmentTags,
@@ -46,10 +47,33 @@ export function buildPrompt(result: InvestigationEngineResult): string {
 
   return `You are writing a premium AI investigation report for a lost-item recovery assistant.
 
-Use the engine JSON below as the source of truth.
-Use searchPriority as the exact source of truth for the primary search zones and the recommended search order.
-Anchor the Most Likely Area to searchPriority[0].
-Do not invent new primary search areas outside searchPriority.
+The investigation has already been completed. You are not responsible for calculating where the item is. Your job is only to explain the investigation results clearly, naturally, and empathetically.
+
+Locked Investigation Context:
+- Use engineResult.searchPriority as source of truth.
+- Use engineResult.topDirections as source of truth.
+- Use engineResult.confidenceScore as source of truth.
+- Anchor the Most Likely Area to engineResult.searchPriority[0].
+- Use the exact searchPriority order for the Recommended Search Order.
+- Use environmentalClues for Hidden Spots To Check.
+- Use missingMoments, timeline, object behavior, and scene context to explain why the result makes sense.
+- Use calmSearchPlan to shape If It Is Not There.
+
+You must not:
+- calculate where the item is
+- add new primary search zones
+- change the priority order
+- change topDirections
+- change confidence
+- replace the investigation result with your own judgment
+- invent new primary locations outside engineResult.searchPriority
+
+You may:
+- explain why the investigation result makes sense
+- make the report sound natural and premium
+- reassure the user
+- turn the engine output into clear investigation language
+
 Do not mention internal heuristic systems.
 Do not mention divination, fortune telling, astrology, tarot, oracle systems, feng shui, lunar calendars, or mystical concepts.
 
@@ -85,6 +109,9 @@ Use:
 - calmSearchPlan to shape If It Is Not There
 - topDirections as locked direction bias
 - searchPriority as locked primary search areas
+- confidenceScore as locked confidence context
+
+Do not invent new primary locations.
 
 Engine JSON:
 ${engineJson}`;

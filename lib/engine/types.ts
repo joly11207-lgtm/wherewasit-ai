@@ -16,6 +16,38 @@ export type EngineInput = {
   story: string;
 };
 
+export type HeightBand = "high" | "middle" | "low" | "unknown";
+export type DistanceBand = "near" | "middle" | "far" | "unknown";
+export type MovementState = "still" | "moved" | "uncertain";
+
+export type KnowledgeReading = {
+  method: string;
+  resultKey: string;
+  directions: Direction[];
+  environments: string[];
+  colors: string[];
+  height: HeightBand;
+  distance: DistanceBand;
+  movement: MovementState;
+  containerHints: string[];
+  hiddenHints: string[];
+  behaviorHints: string[];
+  confidence: number;
+};
+
+export type KnowledgeResult = {
+  readings: KnowledgeReading[];
+  finalDirections: Direction[];
+  finalEnvironments: string[];
+  finalColors: string[];
+  finalHeight: HeightBand;
+  finalDistance: DistanceBand;
+  finalMovement: MovementState;
+  finalContainerHints: string[];
+  finalHiddenHints: string[];
+  finalBehaviorHints: string[];
+};
+
 export type HeuristicWeights = {
   source: string;
   directionWeights: Partial<Record<Direction, number>>;
@@ -23,6 +55,7 @@ export type HeuristicWeights = {
   behaviorWeights: Record<string, number>;
   confidence: number;
   reasonTags: string[];
+  reading?: KnowledgeReading;
 };
 
 export type HeuristicSignal = {
@@ -102,6 +135,7 @@ export type InvestigationEngineResult = {
   timeline: TimelineResult;
   objectProfile: ObjectProfileResult;
   sceneProfile: SceneProfileResult;
+  knowledgeResult: KnowledgeResult;
   heuristicSignals: HeuristicSignal[];
   heuristicWeights: HeuristicWeights[];
   searchPriority: SearchPriorityItem[];

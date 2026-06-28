@@ -1,6 +1,6 @@
 import { directionEngine } from "@/lib/engine/directionEngine";
 import { fuseInvestigation } from "@/lib/engine/fusion/engine";
-import { runHeuristicWeights } from "@/lib/engine/heuristics";
+import { buildKnowledgeResult, runHeuristicWeights } from "@/lib/engine/heuristics";
 import { analyzeMemoryPatterns } from "@/lib/engine/memory/engine";
 import { analyzeObjectProfile } from "@/lib/engine/object/engine";
 import { buildPrompt } from "@/lib/engine/promptBuilder";
@@ -29,6 +29,7 @@ export function runInvestigationEngine(rawInput: EngineInput): InvestigationEngi
     timeline: timelineAnalysis.result,
     memory: memoryAnalysis.result
   });
+  const knowledgeResult = buildKnowledgeResult(heuristicWeights);
   const heuristicSignals = [
     ...objectProfile.signals,
     ...sceneProfile.signals,
@@ -47,6 +48,7 @@ export function runInvestigationEngine(rawInput: EngineInput): InvestigationEngi
     directions,
     objectProfile,
     sceneProfile,
+    knowledgeResult,
     timeline: timelineAnalysis.result,
     memory: memoryAnalysis.result,
     heuristicSignals,
@@ -55,6 +57,7 @@ export function runInvestigationEngine(rawInput: EngineInput): InvestigationEngi
 
   const result: InvestigationEngineResult = {
     ...fused,
+    knowledgeResult,
     heuristicWeights,
     promptContext: ""
   };
