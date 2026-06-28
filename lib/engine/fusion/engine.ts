@@ -186,7 +186,7 @@ function sceneLocalBoost(candidate: SceneCandidate, sceneProfile: SceneProfileRe
   }
 
   if (sceneProfile.key === "kitchen") {
-    if (includesAny(label, ["sink edge", "drain area", "under a dish towel", "counter edge", "drawer lip"])) {
+    if (includesAny(label, ["sink area", "sink edge", "drain area", "under a dish towel", "counter edge", "drawer lip"])) {
       return 8;
     }
   }
@@ -325,7 +325,7 @@ function itemSceneAffinityBoost(
   }
 
   if (sceneProfile.key === "kitchen" && objectProfile.key === "jewelry") {
-    if (includesAny(label, ["sink edge", "drain area", "under a dish towel", "counter edge", "drawer lip"])) {
+    if (includesAny(label, ["sink area", "sink edge", "drain area", "under a dish towel", "counter edge", "drawer lip"])) {
       return 12;
     }
     if (includesAny(label, ["under cutting board", "near soap dispenser", "sink area"])) {

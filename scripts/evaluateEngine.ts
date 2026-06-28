@@ -40,6 +40,17 @@ type BreakdownRow = {
   failedCaseIds: string[];
 };
 
+type HeuristicAggregateRow = {
+  source: string;
+  caseCount: number;
+  totalDirectionWeight: number;
+  totalEnvironmentWeight: number;
+  totalBehaviorWeight: number;
+  directionCounts: Record<string, number>;
+  environmentCounts: Record<string, number>;
+  behaviorCounts: Record<string, number>;
+};
+
 function divider(label?: string): void {
   const line = "=".repeat(96);
   console.log(`\n${line}`);
@@ -90,6 +101,27 @@ function aggregateWeightContributors(
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4)
     .map(([key, value]) => `${key}:${value}`);
+}
+
+function formatTopMap(weights: Partial<Record<string, number>>, limit: number): string {
+  const entries = Object.entries(weights)
+    .filter(([, value]) => typeof value === "number" && value > 0)
+    .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+    .slice(0, limit)
+    .map(([key, value]) => `${key} +${round(value ?? 0)}`);
+
+  return entries.length > 0 ? entries.join(", ") : "none";
+}
+
+function printHeuristicAttribution(heuristics: HeuristicWeights[]): void {
+  console.log("Heuristic Attribution:");
+  heuristics.forEach((heuristic) => {
+    console.log(`- ${heuristic.source}:`);
+    console.log(`  directions: ${formatTopMap(heuristic.directionWeights, 2)}`);
+    console.log(`  environment: ${formatTopMap(heuristic.environmentWeights, 3)}`);
+    console.log(`  behavior: ${formatTopMap(heuristic.behaviorWeights, 3)}`);
+    console.log(`  tags: ${heuristic.reasonTags.slice(0, 5).join(", ") || "none"}`);
+  });
 }
 
 function extractContributorKeys(entries: string[]): string[] {
@@ -186,6 +218,7 @@ function printCaseEvaluation(evaluation: CaseEvaluation, index: number, total: n
   console.log(
     `Heuristic Summary: raw=${RAW_HEURISTIC_COUNT}, normalized=${result.heuristicWeights.length}, direction=${aggregateDirectionContributors(result.heuristicWeights).join(", ") || "none"}`
   );
+  printHeuristicAttribution(result.heuristicWeights);
   console.log(
     `Matched Priority Terms: ${evaluation.matchedPriorityTerms.length > 0 ? evaluation.matchedPriorityTerms.join(", ") : "none"}`
   );
@@ -300,6 +333,80 @@ function buildBreakdownRows(
   });
 }
 
+function buildHeuristicAggregateRows(evaluations: CaseEvaluation[]): HeuristicAggregateRow[] {
+  const grouped = evaluations.reduce<Record<string, HeuristicAggregateRow>>((accumulator, evaluation) => {
+    evaluation.result.heuristicWeights.forEach((heuristic) => {
+      if (!accumulator[heuristic.source]) {
+        accumulator[heuristic.source] = {
+          source: heuristic.source,
+          caseCount: 0,
+          totalDirectionWeight: 0,
+          totalEnvironmentWeight: 0,
+          totalBehaviorWeight: 0,
+          directionCounts: {},
+          environmentCounts: {},
+          behaviorCounts: {}
+        };
+      }
+
+      const row = accumulator[heuristic.source];
+      row.caseCount += 1;
+
+      Object.entries(heuristic.directionWeights).forEach(([key, value]) => {
+        const weighted = round((value ?? 0) * heuristic.confidence);
+        row.totalDirectionWeight += weighted;
+        row.directionCounts[key] = round((row.directionCounts[key] ?? 0) + weighted);
+      });
+
+      Object.entries(heuristic.environmentWeights).forEach(([key, value]) => {
+        const weighted = round(value * heuristic.confidence);
+        row.totalEnvironmentWeight += weighted;
+        row.environmentCounts[key] = round((row.environmentCounts[key] ?? 0) + weighted);
+      });
+
+      Object.entries(heuristic.behaviorWeights).forEach(([key, value]) => {
+        const weighted = round(value * heuristic.confidence);
+        row.totalBehaviorWeight += weighted;
+        row.behaviorCounts[key] = round((row.behaviorCounts[key] ?? 0) + weighted);
+      });
+    });
+
+    return accumulator;
+  }, {});
+
+  return Object.values(grouped).sort((left, right) => {
+    const leftTotal = left.totalDirectionWeight + left.totalEnvironmentWeight + left.totalBehaviorWeight;
+    const rightTotal = right.totalDirectionWeight + right.totalEnvironmentWeight + right.totalBehaviorWeight;
+    return rightTotal - leftTotal;
+  });
+}
+
+function printHeuristicAggregateSummary(evaluations: CaseEvaluation[]): void {
+  const rows = buildHeuristicAggregateRows(evaluations);
+  const allHeuristics = evaluations.flatMap((evaluation) => evaluation.result.heuristicWeights);
+  const mostCommonDirections = aggregateDirectionContributors(allHeuristics);
+  const mostCommonEnvironments = aggregateWeightContributors(allHeuristics, (entry) => entry.environmentWeights);
+  const mostCommonBehaviors = aggregateWeightContributors(allHeuristics, (entry) => entry.behaviorWeights);
+
+  divider("Heuristic Aggregate Summary");
+  rows.forEach((row) => {
+    const averageDirection = row.caseCount > 0 ? round(row.totalDirectionWeight / row.caseCount) : 0;
+    const averageEnvironment = row.caseCount > 0 ? round(row.totalEnvironmentWeight / row.caseCount) : 0;
+    const averageBehavior = row.caseCount > 0 ? round(row.totalBehaviorWeight / row.caseCount) : 0;
+
+    console.log(`Source: ${row.source}`);
+    console.log(`Average contribution: directions ${averageDirection}, environment ${averageEnvironment}, behavior ${averageBehavior}`);
+    console.log(`Most common directions: ${formatTopMap(row.directionCounts, 2)}`);
+    console.log(`Most common environment contributors: ${formatTopMap(row.environmentCounts, 3)}`);
+    console.log(`Most common behavior contributors: ${formatTopMap(row.behaviorCounts, 3)}`);
+    console.log("");
+  });
+
+  console.log(`Overall most common direction contributors: ${mostCommonDirections.join(", ") || "none"}`);
+  console.log(`Overall most common environment contributors: ${mostCommonEnvironments.join(", ") || "none"}`);
+  console.log(`Overall most common behavior contributors: ${mostCommonBehaviors.join(", ") || "none"}`);
+}
+
 function printSceneBreakdown(rows: BreakdownRow[]): void {
   divider("Per-Scene Breakdown");
 
@@ -340,6 +447,7 @@ function printBreakdowns(evaluations: CaseEvaluation[]): void {
 
   printSceneBreakdown(sceneRows);
   printItemBreakdown(itemRows);
+  printHeuristicAggregateSummary(evaluations);
 }
 
 function main(): void {
