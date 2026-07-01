@@ -3,6 +3,7 @@ import { LocalAnalysis, NarrationResult, ReportSections } from "@/lib/types";
 const NARRATOR_SYSTEM_PROMPT = `You are a calm, reassuring, practical Lost Item Search Coach.
 
 Your job is to turn a local lost-item analysis into a helpful search experience for an English-speaking user in natural American English.
+The investigation has already been completed. You are not responsible for calculating where the item is. Your job is only to explain the investigation results clearly, naturally, and empathetically.
 
 Write like a thoughtful human guide, not a software tool.
 
@@ -24,14 +25,22 @@ Do:
 - include item-specific coaching such as charging areas for earbuds, checkout counters for wallets, sink or laundry zones for rings, travel sleeves for passports, and couch cushions or bedside tables for glasses
 - when the item is a ring, jewelry, passport, or wallet, sound a little more reassuring and steady
 - end every report with one short encouraging sentence
-- follow the engine searchPriority as the source of truth for the primary search zones and their order
+- use engineResult.searchPriority as the source of truth for the primary search zones and their order
+- use engineResult.topDirections as the source of truth
+- use engineResult.confidenceScore as the source of truth
 - keep Hidden Spots To Check anchored to the engine environmental clues
+- explain the investigation clearly without recalculating it
 
 Do not:
 - return JSON
 - repeat field names or raw engine labels
 - dump scores
 - list engine outputs
+- add new primary search zones
+- change the priority order
+- change topDirections
+- change confidence
+- make a fresh judgment about where the item is
 - mention fortune telling, divination, astrology, psychic powers, guarantees, or prediction
 - promise the item will be found
 
@@ -106,31 +115,14 @@ function sentenceList(values: string[], limit: number): string {
 function buildFallbackSections(analysis: LocalAnalysis): ReportSections {
   const engine = analysis.investigationEngine;
   const mapped = analysis.searchPlan;
-  const topPriority = engine.searchPriority[0];
-  const topDirection = engine.topDirections[0]?.direction;
-  const secondDirection = engine.topDirections[1]?.direction;
-  const missingMoments = engine.missingMoments
-    .slice(0, 3)
-    .map((moment) => moment.replace(/^The item may have been released during /i, "").replace(/\.$/, ""));
-  const directionTags = engine.topDirections
-    .flatMap((entry) => entry.tags)
-    .filter((tag, index, array) => array.indexOf(tag) === index)
-    .slice(0, 4);
-  const environmentalPattern = [...directionTags, ...engine.environmentalClues]
-    .filter((value, index, array) => array.indexOf(value) === index)
-    .slice(0, 4);
 
   return {
-    mostLikelyArea: topPriority
-      ? `Start with ${topPriority.label}. This is the strongest zone because it connects your timeline, the object behavior, and the highest spatial signal: ${topDirection ?? "the first directional pattern"}.`
-      : mapped.mostLikelyArea,
+    mostLikelyArea: mapped.mostLikelyArea,
     prioritySearchOrder: mapped.prioritySearchOrder,
     hiddenSpots: mapped.hiddenSpots,
     whyThisMakesSense: mapped.whyThisMakesSense,
-    wisdomSignal:
-      mapped.wisdomSignal ||
-      `Spatial signal: ${sentenceList([topDirection, secondDirection].filter(Boolean) as string[], 2) || "the strongest nearby zones"}. Environmental pattern: ${sentenceList(environmentalPattern, 4) || "the clearest scene clues"}. Focus on these as search zones, not as certainty.`,
-    ifNotFound: `If the first pass misses it, stay with this 15-minute calm search protocol: ${engine.calmSearchPlan.join(" ")}`
+    wisdomSignal: mapped.wisdomSignal,
+    ifNotFound: mapped.ifNotFound
   };
 }
 

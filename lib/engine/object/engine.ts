@@ -27,8 +27,8 @@ export function analyzeObjectProfile(input: EngineInput): ObjectProfileResult {
     directions: key === "audio" || key === "phone" || key === "glasses" ? ["East", "Southeast"] : ["North", "West"],
     environmentTags: [...profile.riskZones.slice(0, 2), ...profile.likelyContainers.slice(0, 2)],
     objectTags: [...profile.physicalTraits.slice(0, 2), ...profile.commonBehaviors.slice(0, 2)],
-    weight: 8,
-    reason: `Object behavior suggests focusing on how ${profile.label.toLowerCase()} typically gets set down, carried, or visually hidden.`
+    weight: 3,
+    reason: `Object profile helps translate abstract search signals into the specific ways ${profile.label.toLowerCase()} is usually carried, set down, or covered.`
   };
 
   return {

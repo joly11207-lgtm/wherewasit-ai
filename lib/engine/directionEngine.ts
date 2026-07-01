@@ -177,13 +177,20 @@ export function directionEngine(
   );
 
   heuristicSignals.forEach((signal) => {
+    const signalScale =
+      signal.source === "object" || signal.source === "scene"
+        ? 0.35
+        : signal.source === "timeline" || signal.source === "memory"
+          ? 0.6
+          : 0.5;
+
     signal.directions.forEach((direction) => {
       const entry = scores.get(direction);
       if (!entry) {
         return;
       }
 
-      entry.score += signal.weight;
+      entry.score += Number((signal.weight * signalScale).toFixed(2));
     });
   });
 
@@ -194,7 +201,7 @@ export function directionEngine(
         return;
       }
 
-      const bounded = Math.min(weight, 12) * Math.min(Math.max(heuristic.confidence, 0.3), 0.9) * 0.55;
+      const bounded = Math.min(weight, 12) * Math.min(Math.max(heuristic.confidence, 0.3), 0.9) * 0.8;
       entry.score += Number(bounded.toFixed(2));
     });
   });

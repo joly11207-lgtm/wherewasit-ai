@@ -149,8 +149,8 @@ export function analyzeSceneProfile(input: EngineInput): SceneProfileResult {
               : ["East", "Southeast"],
     environmentTags: [...profile.zones.slice(0, 2), ...profile.hiddenAreas.slice(0, 2)],
     objectTags: [...profile.commonContainers.slice(0, 2)],
-    weight: 8,
-    reason: `Scene knowledge highlights the most likely drop zones and transition points inside ${profile.label.toLowerCase()}.`
+    weight: 3,
+    reason: `Scene profile helps land abstract search signals inside the concrete zones and containers of ${profile.label.toLowerCase()}.`
   };
 
   return {
